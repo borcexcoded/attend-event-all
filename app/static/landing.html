@@ -1,0 +1,1675 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ttend — Smart Attendance for Every Organization</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-font-smoothing: antialiased;
+      }
+      :root {
+        --bg: #fff;
+        --fg: #1d1d1f;
+        --fg2: #6e6e73;
+        --fg3: #86868b;
+        --green: #25d366;
+        --green-dark: #128c7e;
+        --teal: #075e54;
+        --surface: #f0f2f5;
+        --card: #fff;
+        --border: #e0e0e0;
+        --radius: 16px;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI",
+          Roboto, Helvetica, Arial, sans-serif;
+        color: var(--fg);
+        line-height: 1.5;
+        background: var(--bg);
+      }
+      a {
+        text-decoration: none;
+        color: inherit;
+      }
+      ::selection {
+        background: var(--green);
+        color: #fff;
+      }
+
+      /* NAV */
+      .nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 50;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(20px) saturate(180%);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+      }
+      .nav-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 40px;
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .nav-logo {
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .nav-logo svg {
+        width: 28px;
+        height: 28px;
+        color: var(--green);
+      }
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 32px;
+      }
+      .nav-links a {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--fg2);
+        transition: color 0.2s;
+      }
+      .nav-links a:hover {
+        color: var(--fg);
+      }
+      .btn-nav {
+        background: var(--green);
+        color: #fff;
+        padding: 8px 20px;
+        border-radius: 999px;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.2s;
+        border: none;
+        cursor: pointer;
+      }
+      .btn-nav:hover {
+        background: var(--green-dark);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+      }
+      @media (max-width: 768px) {
+        .nav-links a.hide-mobile {
+          display: none;
+        }
+        .nav-inner {
+          padding: 0 20px;
+        }
+      }
+
+      /* HERO */
+      .hero {
+        padding: 140px 40px 80px;
+        text-align: center;
+        background: linear-gradient(180deg, #f8faf8 0%, #fff 100%);
+        overflow: hidden;
+        position: relative;
+      }
+      .hero::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 800px;
+        height: 800px;
+        background: radial-gradient(
+          circle,
+          rgba(37, 211, 102, 0.06) 0%,
+          transparent 70%
+        );
+        pointer-events: none;
+      }
+      .hero h1 {
+        font-size: clamp(40px, 6vw, 72px);
+        font-weight: 700;
+        letter-spacing: -0.04em;
+        line-height: 1.05;
+        max-width: 800px;
+        margin: 0 auto 24px;
+      }
+      .hero p.sub {
+        font-size: clamp(16px, 2vw, 20px);
+        color: var(--fg2);
+        max-width: 560px;
+        margin: 0 auto 40px;
+        line-height: 1.6;
+      }
+      .hero-actions {
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-bottom: 60px;
+      }
+      .btn-hero {
+        padding: 14px 32px;
+        border-radius: 999px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.25s;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .btn-hero svg {
+        width: 18px;
+        height: 18px;
+      }
+      .btn-hero-primary {
+        background: var(--green);
+        color: #fff;
+        box-shadow: 0 4px 20px rgba(37, 211, 102, 0.25);
+      }
+      .btn-hero-primary:hover {
+        background: var(--green-dark);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px rgba(37, 211, 102, 0.35);
+      }
+      .btn-hero-secondary {
+        background: transparent;
+        color: var(--fg);
+        border: 1.5px solid var(--border);
+      }
+      .btn-hero-secondary:hover {
+        background: var(--surface);
+        border-color: var(--fg3);
+      }
+      @media (max-width: 768px) {
+        .hero {
+          padding: 120px 20px 60px;
+        }
+      }
+
+      /* LIVE DASHBOARD */
+      .dash-frame {
+        max-width: 1060px;
+        margin: 0 auto;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow:
+          0 20px 80px rgba(0, 0, 0, 0.1),
+          0 4px 20px rgba(0, 0, 0, 0.06);
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        background: var(--surface);
+      }
+      .dash-wrap {
+        display: flex;
+        min-height: 520px;
+      }
+      .dash-sb {
+        width: 210px;
+        background: #fff;
+        border-right: 1px solid var(--border);
+        padding: 20px 14px;
+        flex-shrink: 0;
+      }
+      .dash-sb .brand {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--teal);
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .dash-sb .brand svg {
+        width: 16px;
+        height: 16px;
+        color: var(--green);
+      }
+      .dash-sb .nav-i {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 8px;
+        font-size: 12px;
+        color: var(--fg2);
+        cursor: pointer;
+        margin-bottom: 2px;
+        transition: all 0.2s;
+      }
+      .dash-sb .nav-i:hover {
+        background: var(--surface);
+      }
+      .dash-sb .nav-i.active {
+        background: var(--green);
+        color: #fff;
+      }
+      .dash-sb .nav-i .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+        flex-shrink: 0;
+      }
+      .dash-main {
+        flex: 1;
+        padding: 28px 32px;
+        overflow: hidden;
+      }
+      .dash-main h3 {
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 16px;
+      }
+      @media (max-width: 768px) {
+        .dash-sb {
+          display: none;
+        }
+        .dash-main {
+          padding: 20px 16px;
+        }
+      }
+
+      /* Mini stat cards */
+      .m-stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+      @media (max-width: 600px) {
+        .m-stats {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+      .m-stat {
+        background: #fff;
+        border-radius: 12px;
+        padding: 14px;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+        border: 1px solid rgba(0, 0, 0, 0.04);
+      }
+      .m-stat .label {
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--fg3);
+      }
+      .m-stat .num {
+        font-size: 22px;
+        font-weight: 700;
+        margin-top: 2px;
+      }
+      .m-stat .sub {
+        font-size: 10px;
+        color: var(--green-dark);
+        margin-top: 2px;
+        font-weight: 500;
+      }
+
+      /* Mini chart & members */
+      .m-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+      @media (max-width: 600px) {
+        .m-row {
+          grid-template-columns: 1fr;
+        }
+      }
+      .m-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+        border: 1px solid rgba(0, 0, 0, 0.04);
+      }
+      .m-card h4 {
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 10px;
+        color: var(--fg);
+      }
+      .chart-bars {
+        display: flex;
+        align-items: flex-end;
+        gap: 6px;
+        height: 100px;
+      }
+      .chart-bar {
+        flex: 1;
+        background: var(--green);
+        border-radius: 4px 4px 0 0;
+        min-height: 8px;
+        transition: height 0.6s ease;
+        position: relative;
+        cursor: pointer;
+      }
+      .chart-bar:hover {
+        opacity: 0.85;
+      }
+      .chart-bar .tip {
+        position: absolute;
+        bottom: calc(100% + 4px);
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--fg);
+        color: #fff;
+        font-size: 9px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        white-space: nowrap;
+        opacity: 0;
+        transition: opacity 0.2s;
+        pointer-events: none;
+      }
+      .chart-bar:hover .tip {
+        opacity: 1;
+      }
+      .chart-bar .day {
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 9px;
+        color: var(--fg3);
+      }
+      .m-member {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+      }
+      .m-member:last-child {
+        border: none;
+      }
+      .m-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        overflow: hidden;
+        background: var(--surface);
+        flex-shrink: 0;
+      }
+      .m-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .m-name {
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .m-badge {
+        margin-left: auto;
+        font-size: 10px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 99px;
+        background: rgba(37, 211, 102, 0.1);
+        color: var(--green-dark);
+      }
+
+      /* Visitor panel */
+      .m-visitors {
+        background: #fff;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+        border: 1px solid rgba(0, 0, 0, 0.04);
+      }
+      .m-visitors h4 {
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .m-visitors h4 .count {
+        background: var(--green);
+        color: #fff;
+        font-size: 10px;
+        padding: 1px 7px;
+        border-radius: 99px;
+      }
+      .v-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+      }
+      .v-row:last-child {
+        border: none;
+      }
+      .v-face {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        overflow: hidden;
+        background: var(--surface);
+        flex-shrink: 0;
+        border: 2px solid #ff9f0a;
+      }
+      .v-face img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .v-info {
+        flex: 1;
+        min-width: 0;
+      }
+      .v-info .v-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: #ff9f0a;
+      }
+      .v-info .v-sub {
+        font-size: 10px;
+        color: var(--fg3);
+      }
+      .v-badge {
+        font-size: 9px;
+        padding: 2px 6px;
+        border-radius: 99px;
+        background: rgba(255, 159, 10, 0.1);
+        color: #c47e00;
+        font-weight: 600;
+      }
+
+      /* IMAGE SECTIONS */
+      .img-section {
+        padding: 100px 40px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      .img-section.alt {
+        background: var(--surface);
+        max-width: 100%;
+        padding: 100px 40px;
+      }
+      .img-section.alt .inner {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      .section-label {
+        font-size: 13px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--green-dark);
+        margin-bottom: 12px;
+      }
+      .section-title {
+        font-size: clamp(28px, 4vw, 44px);
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        line-height: 1.1;
+        margin-bottom: 16px;
+      }
+      .section-sub {
+        font-size: 17px;
+        color: var(--fg2);
+        max-width: 560px;
+        margin-bottom: 48px;
+        line-height: 1.6;
+      }
+      .feat-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 60px;
+        align-items: center;
+        margin-bottom: 80px;
+      }
+      .feat-row:last-child {
+        margin-bottom: 0;
+      }
+      .feat-row.reverse {
+        direction: rtl;
+      }
+      .feat-row.reverse > * {
+        direction: ltr;
+      }
+      @media (max-width: 768px) {
+        .feat-row,
+        .feat-row.reverse {
+          grid-template-columns: 1fr;
+          gap: 30px;
+          direction: ltr;
+        }
+        .feat-row > * {
+          direction: ltr;
+        }
+        .img-section {
+          padding: 60px 20px;
+        }
+        .img-section.alt {
+          padding: 60px 20px;
+        }
+      }
+      .feat-img {
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+        border: 1px solid rgba(0, 0, 0, 0.04);
+      }
+      .feat-img img {
+        width: 100%;
+        display: block;
+        aspect-ratio: 4/3;
+        object-fit: cover;
+      }
+      .feat-text h3 {
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        margin-bottom: 12px;
+      }
+      .feat-text p {
+        font-size: 15px;
+        color: var(--fg2);
+        line-height: 1.7;
+        margin-bottom: 16px;
+      }
+      .feat-text ul {
+        list-style: none;
+        padding: 0;
+      }
+      .feat-text ul li {
+        font-size: 14px;
+        color: var(--fg2);
+        padding: 6px 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .feat-text ul li svg {
+        width: 16px;
+        height: 16px;
+        color: var(--green);
+        flex-shrink: 0;
+      }
+
+      /* HOW */
+      .how {
+        padding: 100px 40px;
+        background: var(--surface);
+      }
+      .how-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        text-align: center;
+      }
+      .how-steps {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 40px;
+        margin-top: 60px;
+        position: relative;
+      }
+      .how-steps::before {
+        content: "";
+        position: absolute;
+        top: 40px;
+        left: calc(16.67% + 20px);
+        right: calc(16.67% + 20px);
+        height: 2px;
+        background: var(--border);
+      }
+      @media (max-width: 768px) {
+        .how-steps {
+          grid-template-columns: 1fr;
+          gap: 32px;
+        }
+        .how-steps::before {
+          display: none;
+        }
+        .how {
+          padding: 60px 20px;
+        }
+      }
+      .step {
+        text-align: center;
+      }
+      .step-num {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: var(--green);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        font-weight: 700;
+        margin: 0 auto 20px;
+        position: relative;
+        z-index: 1;
+      }
+      .step h3 {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+      .step p {
+        font-size: 14px;
+        color: var(--fg2);
+        max-width: 280px;
+        margin: 0 auto;
+        line-height: 1.6;
+      }
+      .step-img {
+        width: 180px;
+        height: 120px;
+        border-radius: 12px;
+        overflow: hidden;
+        margin: 16px auto 0;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+      }
+      .step-img img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      /* CTA */
+      .cta {
+        padding: 100px 40px;
+        text-align: center;
+        background: linear-gradient(180deg, #fff 0%, #f0faf2 50%, #fff 100%);
+      }
+      .cta h2 {
+        font-size: clamp(28px, 4vw, 44px);
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        margin-bottom: 16px;
+      }
+      .cta p {
+        font-size: 17px;
+        color: var(--fg2);
+        max-width: 480px;
+        margin: 0 auto 36px;
+        line-height: 1.6;
+      }
+
+      /* FOOTER */
+      .footer {
+        padding: 40px;
+        border-top: 1px solid var(--border);
+        text-align: center;
+      }
+      .footer p {
+        font-size: 13px;
+        color: var(--fg3);
+      }
+      .footer a {
+        color: var(--green-dark);
+        font-weight: 500;
+      }
+
+      /* AUTH MODAL */
+      .modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(8px);
+        z-index: 100;
+        align-items: center;
+        justify-content: center;
+      }
+      .modal-overlay.show {
+        display: flex;
+      }
+      .modal {
+        background: #fff;
+        border-radius: 20px;
+        width: 440px;
+        max-width: calc(100vw - 40px);
+        max-height: calc(100vh - 80px);
+        overflow-y: auto;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        padding: 40px;
+        position: relative;
+      }
+      .modal-close {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: none;
+        background: var(--surface);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .modal-close:hover {
+        background: #e0e0e0;
+      }
+      .modal-close svg {
+        width: 16px;
+        height: 16px;
+        color: var(--fg);
+      }
+      .modal h2 {
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        margin-bottom: 4px;
+      }
+      .modal p.sub {
+        font-size: 14px;
+        color: var(--fg2);
+        margin-bottom: 28px;
+      }
+      .modal .tabs {
+        display: flex;
+        margin-bottom: 28px;
+        border-bottom: 1px solid var(--border);
+      }
+      .modal .tab {
+        flex: 1;
+        text-align: center;
+        padding: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--fg3);
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s;
+      }
+      .modal .tab.active {
+        color: var(--green-dark);
+        border-color: var(--green);
+      }
+      .modal .form-group {
+        margin-bottom: 16px;
+      }
+      .modal label {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--fg2);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 6px;
+      }
+      .modal input,
+      .modal select {
+        width: 100%;
+        padding: 11px 16px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        font-size: 14px;
+        color: var(--fg);
+        font-family: inherit;
+        background: #fff;
+        transition: all 0.2s;
+        outline: none;
+      }
+      .modal input:focus,
+      .modal select:focus {
+        border-color: var(--green);
+        box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.12);
+      }
+      .modal .btn-submit {
+        width: 100%;
+        padding: 13px;
+        border-radius: 12px;
+        border: none;
+        background: var(--green);
+        color: #fff;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-top: 8px;
+      }
+      .modal .btn-submit:hover {
+        background: var(--green-dark);
+      }
+      .modal .btn-submit:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .modal .error-msg {
+        color: #ff3b30;
+        font-size: 13px;
+        margin-top: 8px;
+        display: none;
+      }
+      .modal .error-msg.show {
+        display: block;
+      }
+      @keyframes blink {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.3;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- NAV -->
+    <nav class="nav">
+      <div class="nav-inner">
+        <a href="/" class="nav-logo"
+          ><svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+          @ttend</a
+        >
+        <div class="nav-links">
+          <a href="#features" class="hide-mobile">Features</a>
+          <a href="#how" class="hide-mobile">How it works</a>
+          <a
+            href="#"
+            onclick="
+              openAuth('login');
+              return false;
+            "
+            >Log in</a
+          >
+          <button class="btn-nav" onclick="openAuth('signup')">
+            Get Started
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- HERO -->
+    <section class="hero">
+      <h1>Attendance made effortless with face recognition</h1>
+      <p class="sub">
+        No more sign-in sheets. Just look at the camera and your attendance is
+        marked instantly. Built for churches, schools, and organizations.
+      </p>
+      <div class="hero-actions">
+        <button class="btn-hero btn-hero-primary" onclick="openAuth('signup')">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+            <polyline points="10 17 15 12 10 7" />
+            <line x1="15" y1="12" x2="3" y2="12" />
+          </svg>
+          Start for free
+        </button>
+        <button
+          class="btn-hero btn-hero-secondary"
+          onclick="
+            document
+              .getElementById('features')
+              .scrollIntoView({ behavior: 'smooth' })
+          "
+        >
+          Learn more
+        </button>
+      </div>
+
+      <!-- INTERACTIVE DASHBOARD MOCKUP -->
+      <div class="dash-frame">
+        <div class="dash-wrap">
+          <div class="dash-sb">
+            <div class="brand">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+              </svg>
+              @ttend
+            </div>
+            <div class="nav-i active" data-demo="dashboard">
+              <div class="dot"></div>
+              Dashboard
+            </div>
+            <div class="nav-i" data-demo="attendance">
+              <div class="dot"></div>
+              Attendance
+            </div>
+            <div class="nav-i" data-demo="members">
+              <div class="dot"></div>
+              Members
+            </div>
+            <div class="nav-i" data-demo="visitors">
+              <div class="dot"></div>
+              New Members
+            </div>
+            <div class="nav-i" data-demo="records">
+              <div class="dot"></div>
+              Records
+            </div>
+          </div>
+          <div class="dash-main" id="demoMain"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEATURES with images -->
+    <section class="img-section" id="features">
+      <div class="section-label">Features</div>
+      <div class="section-title">Everything you need to track attendance</div>
+      <div class="section-sub">
+        Powerful tools that work together seamlessly, designed for organizations
+        of any size.
+      </div>
+
+      <div class="feat-row">
+        <div class="feat-img">
+          <img
+            src="https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=600&h=450&fit=crop"
+            alt="Face recognition camera"
+            loading="lazy"
+          />
+        </div>
+        <div class="feat-text">
+          <h3>Real-time Face Recognition</h3>
+          <p>
+            Point your camera at a group and instantly identify every member.
+            Bounding boxes highlight each face with names and confidence scores.
+          </p>
+          <ul>
+            <li>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Live camera, photo upload, or video
+            </li>
+            <li>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Green boxes for members, orange for new faces
+            </li>
+            <li>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Unknown faces captured automatically
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="feat-row reverse">
+        <div class="feat-img">
+          <img
+            src="https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=600&h=450&fit=crop"
+            alt="Church community"
+            loading="lazy"
+          />
+        </div>
+        <div class="feat-text">
+          <h3>New Member Detection</h3>
+          <p>
+            When someone unrecognized appears, their face is captured and shown
+            in a dedicated panel for admin verification.
+          </p>
+          <ul>
+            <li>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Automatic face capture for unknowns
+            </li>
+            <li>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Verify, label, or link to existing member
+            </li>
+            <li>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Count new vs returning visitors
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="feat-row">
+        <div class="feat-img">
+          <img
+            src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&h=450&fit=crop"
+            alt="Dashboard analytics"
+            loading="lazy"
+          />
+        </div>
+        <div class="feat-text">
+          <h3>Rich Dashboard &amp; Analytics</h3>
+          <p>
+            Visualize trends with bar charts, track top attendees, and see daily
+            breakdowns at a glance. Export everything as CSV.
+          </p>
+          <ul>
+            <li>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              7-day attendance chart
+            </li>
+            <li>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Member profiles with photos
+            </li>
+            <li>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              CSV import &amp; export
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="feat-row reverse">
+        <div class="feat-img">
+          <img
+            src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600&h=450&fit=crop"
+            alt="Team collaboration"
+            loading="lazy"
+          />
+        </div>
+        <div class="feat-text">
+          <h3>Team &amp; Access Control</h3>
+          <p>
+            Invite team members as admins or viewers. Duplicate face prevention
+            ensures no one is registered twice.
+          </p>
+          <ul>
+            <li>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Role-based permissions
+            </li>
+            <li>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              No duplicate faces allowed
+            </li>
+            <li>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Multi-organization support
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- HOW -->
+    <section class="how" id="how">
+      <div class="how-inner">
+        <div class="section-label">How it works</div>
+        <div class="section-title">Get started in three simple steps</div>
+        <div class="how-steps">
+          <div class="step">
+            <div class="step-num">1</div>
+            <h3>Create your organization</h3>
+            <p>
+              Sign up with your church or org name. It takes less than a minute.
+            </p>
+            <div class="step-img">
+              <img
+                src="https://images.unsplash.com/photo-1557804506-669a67965ba0?w=360&h=240&fit=crop"
+                alt="Signup"
+                loading="lazy"
+              />
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">2</div>
+            <h3>Register your members</h3>
+            <p>
+              Add members with a photo or bulk import from CSV. Each face is
+              securely encoded.
+            </p>
+            <div class="step-img">
+              <img
+                src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=360&h=240&fit=crop"
+                alt="Register"
+                loading="lazy"
+              />
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <h3>Start tracking attendance</h3>
+            <p>
+              Use your camera or upload a group photo. Attendance is marked
+              automatically.
+            </p>
+            <div class="step-img">
+              <img
+                src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=360&h=240&fit=crop"
+                alt="Track"
+                loading="lazy"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta">
+      <h2>Ready to modernize your attendance?</h2>
+      <p>
+        Join organizations using @ttend. Free to get started, no credit card
+        required.
+      </p>
+      <button class="btn-hero btn-hero-primary" onclick="openAuth('signup')">
+        Create free account
+      </button>
+    </section>
+
+    <footer class="footer">
+      <p>
+        @ttend &middot; Powered by Allow AI Africa &middot;
+        <a href="/app">Dashboard</a>
+      </p>
+    </footer>
+
+    <!-- AUTH MODAL -->
+    <div class="modal-overlay" id="authModal">
+      <div class="modal">
+        <button class="modal-close" onclick="closeAuth()">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+        <h2 id="authTitle">Get started</h2>
+        <p class="sub" id="authSub">Create your organization account</p>
+        <div class="tabs">
+          <div class="tab active" id="tabSignup" onclick="switchTab('signup')">
+            Sign Up
+          </div>
+          <div class="tab" id="tabLogin" onclick="switchTab('login')">
+            Log In
+          </div>
+        </div>
+        <form id="signupForm" onsubmit="handleSignup(event)">
+          <div class="form-group">
+            <label>Organization Name</label
+            ><input
+              type="text"
+              id="sOrgName"
+              placeholder="e.g. Grace Community Church"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label>Organization Type</label
+            ><select id="sOrgType">
+              <option value="church">Church</option>
+              <option value="school">School</option>
+              <option value="company">Company</option>
+              <option value="club">Club / Association</option>
+              <option value="event">Event / Conference</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Your Full Name</label
+            ><input
+              type="text"
+              id="sFullName"
+              placeholder="John Smith"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label>Email</label
+            ><input
+              type="email"
+              id="sEmail"
+              placeholder="you@church.org"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label>Password</label
+            ><input
+              type="password"
+              id="sPassword"
+              placeholder="Min 6 characters"
+              minlength="6"
+              required
+            />
+          </div>
+          <div class="error-msg" id="signupError"></div>
+          <button type="submit" class="btn-submit" id="signupBtn">
+            Create Account
+          </button>
+        </form>
+        <form
+          id="loginForm"
+          style="display: none"
+          onsubmit="handleLogin(event)"
+        >
+          <div class="form-group">
+            <label>Email</label
+            ><input
+              type="email"
+              id="lEmail"
+              placeholder="you@church.org"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label>Password</label
+            ><input type="password" id="lPassword" required />
+          </div>
+          <div class="error-msg" id="loginError"></div>
+          <button type="submit" class="btn-submit" id="loginBtn">Log In</button>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      const API = "/api";
+      function openAuth(t) {
+        document.getElementById("authModal").classList.add("show");
+        switchTab(t || "signup");
+      }
+      function closeAuth() {
+        document.getElementById("authModal").classList.remove("show");
+      }
+      document.getElementById("authModal").addEventListener("click", (e) => {
+        if (e.target === e.currentTarget) closeAuth();
+      });
+      function switchTab(t) {
+        const s = t === "signup";
+        document.getElementById("tabSignup").classList.toggle("active", s);
+        document.getElementById("tabLogin").classList.toggle("active", !s);
+        document.getElementById("signupForm").style.display = s
+          ? "block"
+          : "none";
+        document.getElementById("loginForm").style.display = s
+          ? "none"
+          : "block";
+        document.getElementById("authTitle").textContent = s
+          ? "Get started"
+          : "Welcome back";
+        document.getElementById("authSub").textContent = s
+          ? "Create your organization account"
+          : "Log in to your dashboard";
+      }
+      async function handleSignup(e) {
+        e.preventDefault();
+        const b = document.getElementById("signupBtn"),
+          er = document.getElementById("signupError");
+        b.disabled = true;
+        b.textContent = "Creating...";
+        er.classList.remove("show");
+        try {
+          const r = await fetch(`${API}/auth/signup`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              org_name: document.getElementById("sOrgName").value,
+              org_type: document.getElementById("sOrgType").value,
+              full_name: document.getElementById("sFullName").value,
+              email: document.getElementById("sEmail").value,
+              password: document.getElementById("sPassword").value,
+            }),
+          });
+          const d = await r.json();
+          if (!r.ok) throw new Error(d.detail || "Signup failed");
+          localStorage.setItem("token", d.token);
+          localStorage.setItem("admin", JSON.stringify(d.admin));
+          localStorage.setItem("org", JSON.stringify(d.org));
+          window.location.href = "/app";
+        } catch (x) {
+          er.textContent = x.message;
+          er.classList.add("show");
+        } finally {
+          b.disabled = false;
+          b.textContent = "Create Account";
+        }
+      }
+      async function handleLogin(e) {
+        e.preventDefault();
+        const b = document.getElementById("loginBtn"),
+          er = document.getElementById("loginError");
+        b.disabled = true;
+        b.textContent = "Logging in...";
+        er.classList.remove("show");
+        try {
+          const r = await fetch(`${API}/auth/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: document.getElementById("lEmail").value,
+              password: document.getElementById("lPassword").value,
+            }),
+          });
+          const d = await r.json();
+          if (!r.ok) throw new Error(d.detail || "Login failed");
+          localStorage.setItem("token", d.token);
+          localStorage.setItem("admin", JSON.stringify(d.admin));
+          localStorage.setItem("org", JSON.stringify(d.org));
+          window.location.href = "/app";
+        } catch (x) {
+          er.textContent = x.message;
+          er.classList.add("show");
+        } finally {
+          b.disabled = false;
+          b.textContent = "Log In";
+        }
+      }
+      if (localStorage.getItem("token")) {
+        fetch(`${API}/auth/me`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        })
+          .then((r) => {
+            if (r.ok) window.location.href = "/app";
+          })
+          .catch(() => {});
+      }
+
+      // ===================== INTERACTIVE DASHBOARD DEMO =====================
+      const names = [
+        "Sarah Johnson",
+        "Michael Chen",
+        "Grace Williams",
+        "David Okafor",
+        "Emma Rodriguez",
+        "Pastor James",
+        "Ruth Kim",
+        "Daniel Smith",
+        "Hannah Lee",
+        "Isaac Brown",
+      ];
+      const faces = [
+        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=56&h=56&fit=crop&crop=face",
+        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=56&h=56&fit=crop&crop=face",
+        "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=56&h=56&fit=crop&crop=face",
+        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=56&h=56&fit=crop&crop=face",
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=56&h=56&fit=crop&crop=face",
+        "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=56&h=56&fit=crop&crop=face",
+        "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=56&h=56&fit=crop&crop=face",
+        "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=56&h=56&fit=crop&crop=face",
+        "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=56&h=56&fit=crop&crop=face",
+        "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=56&h=56&fit=crop&crop=face",
+      ];
+      const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+      const counts = [18, 24, 32, 28, 45, 67, 42];
+      const visitorFaces = [
+        "https://images.unsplash.com/photo-1552058544-f2b08422138a?w=56&h=56&fit=crop&crop=face",
+        "https://images.unsplash.com/photo-1499996860823-5214fcc65f8f?w=56&h=56&fit=crop&crop=face",
+        "https://images.unsplash.com/photo-1504257432389-52343af06ae3?w=56&h=56&fit=crop&crop=face",
+      ];
+
+      const el = document.getElementById("demoMain");
+      const demoNavs = document.querySelectorAll(".dash-sb .nav-i");
+      let animInterval;
+
+      function renderDemo(page) {
+        demoNavs.forEach((n) =>
+          n.classList.toggle("active", n.dataset.demo === page),
+        );
+        clearInterval(animInterval);
+        if (page === "dashboard") renderDashboard();
+        else if (page === "attendance") renderAttendance();
+        else if (page === "members") renderMembers();
+        else if (page === "visitors") renderVisitors();
+        else if (page === "records") renderRecords();
+      }
+      demoNavs.forEach((n) =>
+        n.addEventListener("click", () => {
+          clearInterval(autoCycle);
+          renderDemo(n.dataset.demo);
+        }),
+      );
+
+      function renderDashboard() {
+        const max = Math.max(...counts);
+        el.innerHTML = `<h3>Dashboard</h3>
+  <div class="m-stats">
+    <div class="m-stat"><div class="label">Today</div><div class="num" id="dToday">0</div><div class="sub">+12% from last week</div></div>
+    <div class="m-stat"><div class="label">Members</div><div class="num">156</div><div class="sub">10 registered this month</div></div>
+    <div class="m-stat"><div class="label">New Visitors</div><div class="num" style="color:#ff9f0a">3</div><div class="sub">Pending verification</div></div>
+    <div class="m-stat"><div class="label">Attendance Rate</div><div class="num">92%</div><div class="sub">Last 30 days</div></div>
+  </div>
+  <div class="m-row">
+    <div class="m-card"><h4>This Week</h4><div class="chart-bars" id="dChart"></div></div>
+    <div class="m-card"><h4>Today's Attendance</h4><div id="dMembers"></div></div>
+  </div>
+  <div class="m-visitors"><h4>New Faces Detected <span class="count">3</span></h4><div id="dVisitors"></div></div>`;
+        const chart = document.getElementById("dChart");
+        chart.innerHTML = counts
+          .map(
+            (c, i) =>
+              `<div class="chart-bar" style="height:${(c / max) * 100}%"><span class="tip">${c} members</span><span class="day">${days[i]}</span></div>`,
+          )
+          .join("");
+        document.getElementById("dMembers").innerHTML = names
+          .slice(0, 5)
+          .map(
+            (n, i) =>
+              `<div class="m-member"><div class="m-avatar"><img src="${faces[i]}" alt=""></div><span class="m-name">${n}</span><span class="m-badge">Present</span></div>`,
+          )
+          .join("");
+        document.getElementById("dVisitors").innerHTML = visitorFaces
+          .map(
+            (f, i) =>
+              `<div class="v-row"><div class="v-face"><img src="${f}" alt=""></div><div class="v-info"><div class="v-label">Unknown Face #${i + 1}</div><div class="v-sub">First seen today</div></div><div class="v-badge">Verify</div></div>`,
+          )
+          .join("");
+        let ct = 0;
+        const target = 42;
+        animInterval = setInterval(() => {
+          ct += 2;
+          if (ct >= target) {
+            ct = target;
+            clearInterval(animInterval);
+          }
+          document.getElementById("dToday").textContent = ct;
+        }, 40);
+      }
+
+      function renderAttendance() {
+        el.innerHTML = `<h3>Take Attendance</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div class="m-card" style="padding:0;overflow:hidden">
+      <div style="aspect-ratio:4/3;background:#111;position:relative;display:flex;align-items:center;justify-content:center">
+        <img src="https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=500&h=375&fit=crop" style="width:100%;height:100%;object-fit:cover;opacity:.7" alt="">
+        <div style="position:absolute;top:18%;left:25%;width:20%;height:35%;border:2px solid #25d366;border-radius:6px"></div>
+        <div style="position:absolute;top:15%;left:24%;background:#25d366;color:#fff;font-size:9px;padding:1px 6px;border-radius:3px;font-weight:600">Sarah Johnson</div>
+        <div style="position:absolute;top:20%;left:55%;width:18%;height:32%;border:2px solid #ff9f0a;border-radius:6px"></div>
+        <div style="position:absolute;top:17%;left:54%;background:#ff9f0a;color:#fff;font-size:9px;padding:1px 6px;border-radius:3px;font-weight:600">NEW?</div>
+        <div style="position:absolute;top:12px;left:12px;display:flex;align-items:center;gap:5px;background:rgba(0,0,0,.6);color:#fff;padding:3px 8px;border-radius:99px;font-size:10px;font-weight:600"><div style="width:6px;height:6px;border-radius:50%;background:#ff3b30;animation:blink 1s infinite"></div>LIVE</div>
+      </div>
+    </div>
+    <div class="m-card">
+      <h4>Results</h4>
+      <div style="padding:10px;background:var(--surface);border-radius:8px;margin-bottom:8px"><div style="font-size:13px;font-weight:600">2 faces detected</div><div style="font-size:11px;color:var(--fg2)">1 member, 1 new face</div></div>
+      <div style="display:flex;align-items:center;gap:8px;padding:8px;background:#e8fbef;border-radius:8px;border:1px solid rgba(37,211,102,.2);margin-bottom:6px">
+        <div class="m-avatar"><img src="${faces[0]}" alt=""></div>
+        <div><div style="font-size:12px;font-weight:600">Sarah Johnson</div><div style="font-size:10px;color:var(--fg3)">Attendance marked</div></div>
+        <svg style="margin-left:auto;color:#25d366" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:8px;background:#fff8eb;border-radius:8px;border:1px solid rgba(255,159,10,.2)">
+        <div class="v-face" style="width:28px;height:28px"><img src="${visitorFaces[0]}" alt=""></div>
+        <div><div style="font-size:12px;font-weight:600;color:#ff9f0a">Unknown Face</div><div style="font-size:10px;color:var(--fg3)">Added to visitors</div></div>
+      </div>
+    </div>
+  </div>`;
+      }
+
+      function renderMembers() {
+        el.innerHTML = `<h3>Members <span style="font-weight:400;font-size:14px;color:var(--fg3)">156 total</span></h3>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:12px">${names.map((n, i) => `<div style="display:flex;align-items:center;gap:10px;padding:10px;background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.04);border:1px solid rgba(0,0,0,.04)"><div class="m-avatar"><img src="${faces[i]}" alt=""></div><div><div style="font-size:12px;font-weight:500">${n}</div><div style="font-size:10px;color:var(--fg3)">ID: ${i + 1}</div></div></div>`).join("")}</div>`;
+      }
+
+      function renderVisitors() {
+        el.innerHTML = `<h3>New Members / Visitors</h3>
+  <div class="m-stats" style="margin-top:12px">
+    <div class="m-stat"><div class="label">Total Visitors</div><div class="num">3</div></div>
+    <div class="m-stat"><div class="label">Verified</div><div class="num">1</div></div>
+    <div class="m-stat"><div class="label">Pending</div><div class="num" style="color:#ff9f0a">2</div></div>
+    <div class="m-stat"><div class="label">Returning</div><div class="num">1</div></div>
+  </div>
+  <div class="m-card" style="margin-top:12px">
+    <h4>Pending Verification</h4>
+    ${visitorFaces
+      .map(
+        (f, i) => `<div class="v-row" style="padding:10px 0">
+      <div class="v-face" style="width:40px;height:40px"><img src="${f}" alt=""></div>
+      <div class="v-info"><div class="v-label">Unknown Face #${i + 1}</div><div class="v-sub">${i === 2 ? "Seen 3 times" : "First seen today"}</div></div>
+      <div style="display:flex;gap:4px">
+        <div style="padding:3px 8px;border-radius:6px;font-size:10px;font-weight:600;background:#e8fbef;color:#128c7e;cursor:pointer">New Member</div>
+        <div style="padding:3px 8px;border-radius:6px;font-size:10px;font-weight:600;background:#e8f2fd;color:#0071e3;cursor:pointer">Link</div>
+        <div style="padding:3px 8px;border-radius:6px;font-size:10px;font-weight:600;background:#fff0ef;color:#ff3b30;cursor:pointer">Dismiss</div>
+      </div>
+    </div>`,
+      )
+      .join("")}
+  </div>`;
+      }
+
+      function renderRecords() {
+        el.innerHTML = `<h3>Records</h3>
+  <div class="m-card" style="margin-top:12px;padding:0;overflow:hidden">
+  <table style="width:100%;border-collapse:collapse;font-size:12px">
+  <thead><tr style="background:var(--surface)"><th style="text-align:left;padding:10px 14px;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--fg3);font-weight:600">Member</th><th style="text-align:left;padding:10px 14px;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--fg3);font-weight:600">Time</th><th style="text-align:right;padding:10px 14px;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--fg3);font-weight:600">Type</th></tr></thead>
+  <tbody>${names
+    .slice(0, 6)
+    .map(
+      (n, i) =>
+        `<tr><td style="padding:8px 14px;border-top:1px solid rgba(0,0,0,.04);display:flex;align-items:center;gap:8px"><div class="m-avatar" style="width:24px;height:24px"><img src="${faces[i]}" alt=""></div>${n}</td><td style="padding:8px 14px;border-top:1px solid rgba(0,0,0,.04);color:var(--fg3)">Today ${8 + i}:${15 + i * 3} AM</td><td style="padding:8px 14px;border-top:1px solid rgba(0,0,0,.04);text-align:right"><span style="padding:2px 6px;border-radius:99px;font-size:10px;font-weight:600;background:${i < 5 ? "#e8fbef;color:#128c7e" : "#fff8eb;color:#c47e00"}">${i < 5 ? "Member" : "Visitor"}</span></td></tr>`,
+    )
+    .join("")}</tbody>
+  </table>
+  </div>`;
+      }
+
+      // Init dashboard
+      renderDashboard();
+      // Auto-cycle demo pages
+      let demoIdx = 0;
+      const demoPages = [
+        "dashboard",
+        "attendance",
+        "members",
+        "visitors",
+        "records",
+      ];
+      let autoCycle = setInterval(() => {
+        demoIdx = (demoIdx + 1) % demoPages.length;
+        renderDemo(demoPages[demoIdx]);
+      }, 6000);
+    </script>
+  </body>
+</html>
