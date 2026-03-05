@@ -6,6 +6,7 @@ import {
   deleteAttendanceRecord,
   type AttendanceRecord,
 } from "@/lib/api";
+import { TableShimmer } from "@/components/Shimmer";
 
 export default function AttendancePage() {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
@@ -141,9 +142,7 @@ export default function AttendancePage() {
       {/* Records Table */}
       <div className="bg-card border border-divider rounded-2xl overflow-hidden shadow-[var(--shadow-sm)]">
         {loading ? (
-          <div className="p-16 text-center text-foreground-secondary text-[14px]">
-            Loading records...
-          </div>
+          <TableShimmer rows={8} />
         ) : records.length === 0 ? (
           <div className="p-16 text-center">
             <div className="w-16 h-16 rounded-full bg-background-secondary flex items-center justify-center mx-auto mb-5">

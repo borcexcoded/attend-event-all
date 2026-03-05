@@ -124,3 +124,209 @@ export async function healthCheck(): Promise<{ status: string; message: string }
   if (!res.ok) throw new Error("API not available");
   return res.json();
 }
+
+// --- Analytics ---
+export interface WeeklyTrend {
+  day: string;
+  date: string;
+  attendance_count: number;
+  unique_members: number;
+  visitor_count: number;
+}
+
+export interface AttendanceTrend {
+  period: string;
+  total_attendance: number;
+  average_attendance: number;
+  trend_percentage: number;
+  trend_direction: "up" | "down" | "stable";
+}
+
+export interface TopAttendee {
+  member_id: number;
+  name: string;
+  attendance_count: number;
+  attendance_rate: number;
+  profile_photo: string | null;
+  late_count: number;
+}
+
+export interface MeetingAnalytics {
+  meeting_id: number;
+  meeting_name: string;
+  total_sessions: number;
+  total_attendance: number;
+  average_attendance: number;
+  unique_attendees: number;
+  lateness_rate: number;
+  trend: AttendanceTrend;
+}
+
+export interface BranchAnalytics {
+  branch_id: number;
+  branch_name: string;
+  total_members: number;
+  total_attendance: number;
+  average_attendance: number;
+  visitor_count: number;
+  member_retention_rate: number;
+}
+
+export interface OverallAnalytics {
+  total_members: number;
+  total_attendance: number;
+  average_daily_attendance: number;
+  total_visitors: number;
+  conversion_rate: number;
+  overall_lateness_rate: number;
+  weekly_trends: WeeklyTrend[];
+  attendance_trend: AttendanceTrend;
+}
+
+export interface LatenessReport {
+  member_id: number;
+  name: string;
+  total_attendance: number;
+  late_count: number;
+  lateness_rate: number;
+  average_late_minutes: number;
+}
+
+export async function getAnalyticsOverview(branchId?: number): Promise<OverallAnalytics> {
+  const params = branchId ? `?branch_id=${branchId}` : "";
+  const res = await fetch(`${API_BASE}/analytics/overview${params}`);
+  if (!res.ok) throw new Error("Failed to fetch analytics overview");
+  return res.json();
+}
+
+export async function getWeeklyTrends(
+  branchId?: number,
+  weeks?: number
+): Promise<WeeklyTrend[]> {
+  const searchParams = new URLSearchParams();
+  if (branchId) searchParams.set("branch_id", String(branchId));
+  if (weeks) searchParams.set("weeks", String(weeks));
+  const params = searchParams.toString() ? `?${searchParams.toString()}` : "";
+  const res = await fetch(`${API_BASE}/analytics/weekly-trends${params}`);
+  if (!res.ok) throw new Error("Failed to fetch weekly trends");
+  return res.json();
+}
+
+export async function getTopAttendees(
+  limit?: number,
+  branchId?: number
+): Promise<TopAttendee[]> {
+  const searchParams = new URLSearchParams();
+  if (limit) searchParams.set("limit", String(limit));
+  if (branchId) searchParams.set("branch_id", String(branchId));
+  const params = searchParams.toString() ? `?${searchParams.toString()}` : "";
+  const res = await fetch(`${API_BASE}/analytics/top-attendees${params}`);
+  if (!res.ok) throw new Error("Failed to fetch top attendees");
+  return res.json();
+}
+
+export async function getMeetingAnalytics(meetingId: number): Promise<MeetingAnalytics> {
+  const res = await fetch(`${API_BASE}/analytics/meeting/${meetingId}`);
+  if (!res.ok) throw new Error("Failed to fetch meeting analytics");
+  return res.json();
+}
+
+export async function getBranchAnalytics(): Promise<BranchAnalytics[]> {
+  const res = await fetch(`${API_BASE}/analytics/branches`);
+  if (!res.ok) throw new Error("Failed to fetch branch analytics");
+  return res.json();
+}
+
+export async function getLatenessReport(
+  days?: number,
+  branchId?: number
+): Promise<LatenessReport[]> {
+  const searchParams = new URLSearchParams();
+  if (days) searchParams.set("days", String(days));
+  if (branchId) searchParams.set("branch_id", String(branchId));
+  const params = searchParams.toString() ? `?${searchParams.toString()}` : "";
+  const res = await fetch(`${API_BASE}/analytics/lateness-report${params}`);
+  if (!res.ok) throw new Error("Failed to fetch lateness report");
+  return res.json();
+}
+
+// --- Branches ---
+export interface Branch {
+  id: number;
+  name: string;
+  code: string;
+  address: string | null;
+  city: string | null;
+  country: string | null;
+  timezone: string;
+  is_headquarters: boolean;
+  is_active: boolean;
+  member_count: number;
+  meeting_count: number;
+}
+
+export interface BranchCreate {
+  name: string;
+  code: string;
+  address?: string;
+  city?: string;
+  country?: string;
+  timezone?: string;
+  is_headquarters?: boolean;
+  org_id?: number;
+}
+
+export async function getBranches(activeOnly?: boolean): Promise<Branch[]> {
+  const params = activeOnly === false ? "?active_only=false" : "";
+  const res = await fetch(`${API_BASE}/branches${params}`);
+  if (!res.ok) throw new Error("Failed to fetch branches");
+  return res.json();
+}
+
+export async function createBranch(branch: BranchCreate): Promise<Branch> {
+  const res = await fetch(`${API_BASE}/branches`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(branch),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.detail || "Failed to create branch");
+  }
+  return res.json();
+}
+
+export async function getBranch(branchId: number): Promise<Branch> {
+  const res = await fetch(`${API_BASE}/branches/${branchId}`);
+  if (!res.ok) throw new Error("Failed to fetch branch");
+  return res.json();
+}
+
+export async function updateBranch(
+  branchId: number,
+  data: Partial<Branch>
+): Promise<Branch> {
+  const res = await fetch(`${API_BASE}/branches/${branchId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to update branch");
+  return res.json();
+}
+
+export async function deleteBranch(branchId: number): Promise<{ message: string }> {
+  const res = await fetch(`${API_BASE}/branches/${branchId}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("Failed to delete branch");
+  return res.json();
+}
+
+export async function getBranchMembers(
+  branchId: number,
+  includeGlobal?: boolean
+): Promise<Member[]> {
+  const params = includeGlobal === false ? "?include_global=false" : "";
+  const res = await fetch(`${API_BASE}/branches/${branchId}/members${params}`);
+  if (!res.ok) throw new Error("Failed to fetch branch members");
+  return res.json();
+}

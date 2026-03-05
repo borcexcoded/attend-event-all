@@ -7,6 +7,7 @@ import {
   deleteMember,
   type Member,
 } from "@/lib/api";
+import { MemberGridShimmer } from "@/components/Shimmer";
 
 export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
@@ -83,8 +84,18 @@ export default function MembersPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <div className="text-[15px] text-foreground-secondary">Loading members...</div>
+      <div className="space-y-10">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-[34px] font-bold tracking-[-0.03em] text-foreground">
+              Members
+            </h1>
+            <p className="text-[15px] text-foreground-secondary mt-1">
+              Loading members...
+            </p>
+          </div>
+        </div>
+        <MemberGridShimmer count={8} />
       </div>
     );
   }

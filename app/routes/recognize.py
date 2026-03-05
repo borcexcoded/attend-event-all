@@ -9,6 +9,7 @@ from typing import Optional
 
 from fastapi import APIRouter, UploadFile, File, Depends, Form
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 import face_recognition
 import numpy as np
 import cv2
@@ -32,6 +33,8 @@ def _recognize_faces(
     known_encodings: list[np.ndarray],
     known_names: list[str],
     known_photos: list[str],
+    known_user_ids: list[int],
+    known_branch_ids: list[int],
     visitor_encodings: list[np.ndarray],
     visitor_ids: list[int],
     org_id: int,
@@ -68,6 +71,8 @@ def _recognize_faces(
                 face_info["name"] = known_names[best_idx]
                 face_info["confidence"] = round(1.0 - float(distances[best_idx]), 2)
                 face_info["photo"] = known_photos[best_idx] or ""
+                face_info["user_id"] = known_user_ids[best_idx] if known_user_ids else None
+                face_info["branch_id"] = known_branch_ids[best_idx] if known_branch_ids else None
                 matched = True
                 cv2.rectangle(annotated, (left, top), (right, bottom), (37, 211, 102), 2)
                 label = known_names[best_idx]
@@ -116,6 +121,7 @@ def _recognize_faces(
 async def recognize_face(
     file: UploadFile = File(...),
     meeting_id: Optional[int] = Form(None),
+    branch_id: Optional[int] = Form(None),
     admin: Admin = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
@@ -125,21 +131,32 @@ async def recognize_face(
     # Resolve meeting if provided
     meeting = None
     meeting_name = None
+    late_after_minutes = None
     if meeting_id:
         meeting = db.query(Meeting).filter(
             Meeting.id == meeting_id, Meeting.org_id == admin.org_id
         ).first()
         if meeting:
             meeting_name = meeting.name
+            late_after_minutes = getattr(meeting, 'late_after_minutes', None)
 
-    users = db.query(User).filter(User.org_id == admin.org_id).all()
-    known_encodings, known_names, known_photos = [], [], []
+    # Get members from the organization - include global members and branch-specific members
+    user_query = db.query(User).filter(User.org_id == admin.org_id)
+    if branch_id:
+        # Include both branch-specific members and global members
+        user_query = user_query.filter(
+            or_(User.branch_id == branch_id, User.is_global == True, User.branch_id == None)
+        )
+    users = user_query.all()
+    known_encodings, known_names, known_photos, known_user_ids, known_branch_ids = [], [], [], [], []
     for u in users:
         enc = np.frombuffer(u.face_embedding, dtype=np.float64)
         if np.any(enc != 0):
             known_encodings.append(enc)
             known_names.append(u.name)
             known_photos.append(u.profile_photo)
+            known_user_ids.append(u.id)
+            known_branch_ids.append(getattr(u, 'branch_id', None))
 
     visitors = db.query(Visitor).filter(Visitor.org_id == admin.org_id).all()
     visitor_encodings, visitor_ids = [], []
@@ -150,12 +167,14 @@ async def recognize_face(
 
     annotated_jpg, faces = await asyncio.to_thread(
         _recognize_faces, image_data,
-        known_encodings, known_names, known_photos,
+        known_encodings, known_names, known_photos, known_user_ids, known_branch_ids,
         visitor_encodings, visitor_ids, admin.org_id,
     )
 
     recognized_members = []
     member_photo_map = {}  # name -> profile_photo
+    member_user_ids = {}  # name -> user_id
+    member_branch_ids = {}  # name -> branch_id
     new_visitors = []
 
     for face in faces:
@@ -163,6 +182,8 @@ async def recognize_face(
             if face["name"] not in recognized_members:
                 recognized_members.append(face["name"])
                 member_photo_map[face["name"]] = face.get("photo", "")
+                member_user_ids[face["name"]] = face.get("user_id")
+                member_branch_ids[face["name"]] = face.get("branch_id")
         elif face["type"] == "visitor":
             raw_enc = face.pop("_encoding", None)
             vmid = face.get("visitor_match_id")
@@ -171,16 +192,31 @@ async def recognize_face(
                 if v:
                     v.visit_count += 1
                     v.last_seen = datetime.utcnow()
+                    # Update visitor branch info if provided
+                    if branch_id and not v.first_seen_branch_id:
+                        v.first_seen_branch_id = branch_id
                     new_visitors.append({
                         "id": v.id, "face_photo": v.face_photo,
                         "label": v.label, "visit_count": v.visit_count,
                         "is_returning": True,
                     })
+                    # Mark visitor attendance
+                    db.add(Attendance(
+                        org_id=admin.org_id, 
+                        name=v.label or f"Visitor #{v.id}", 
+                        time=datetime.utcnow(),
+                        member_type="visitor",
+                        visitor_id=v.id,
+                        branch_id=branch_id,
+                        meeting_id=meeting_id if meeting else None,
+                        meeting_name=meeting_name,
+                    ))
             else:
                 v = Visitor(
                     org_id=admin.org_id,
                     face_photo=face["face_crop"],
                     face_embedding=raw_enc,
+                    first_seen_branch_id=branch_id,
                 )
                 db.add(v)
                 db.flush()
@@ -189,6 +225,17 @@ async def recognize_face(
                     "label": None, "visit_count": 1,
                     "is_returning": False,
                 })
+                # Mark new visitor attendance
+                db.add(Attendance(
+                    org_id=admin.org_id, 
+                    name=f"Visitor #{v.id}", 
+                    time=datetime.utcnow(),
+                    member_type="visitor",
+                    visitor_id=v.id,
+                    branch_id=branch_id,
+                    meeting_id=meeting_id if meeting else None,
+                    meeting_name=meeting_name,
+                ))
 
     # Only mark attendance for members not already marked today (per meeting)
     already_marked_today = []
@@ -213,12 +260,35 @@ async def recognize_face(
             if existing:
                 already_marked_today.append(n)
             else:
+                # Calculate lateness if meeting has late_after_minutes set
+                is_late = False
+                late_minutes = 0
+                if meeting and late_after_minutes:
+                    # Get meeting start time from meeting.start_time (HH:MM format) if stored
+                    # For now, we'll use the meeting's scheduled time if available
+                    # This is a simplified check - you may want to compare against meeting start time
+                    pass  # Lateness logic can be enhanced based on meeting schedule
+                
+                user_id = member_user_ids.get(n)
+                member_branch_id = member_branch_ids.get(n)
+                
+                # Determine if this is cross-branch attendance
+                marked_at_branch_id = branch_id
+                is_cross_branch = member_branch_id and branch_id and member_branch_id != branch_id
+                
                 db.add(Attendance(
-                    org_id=admin.org_id, name=n, time=now,
+                    org_id=admin.org_id, 
+                    name=n, 
+                    time=now,
                     profile_photo=member_photo_map.get(n, ""),
                     member_type="member",
                     meeting_id=meeting_id if meeting else None,
                     meeting_name=meeting_name,
+                    user_id=user_id,
+                    branch_id=member_branch_id or branch_id,  # Member's home branch
+                    marked_at_branch_id=marked_at_branch_id,  # Branch where attendance was taken
+                    is_late=is_late,
+                    late_minutes=late_minutes,
                 ))
                 newly_marked.append(n)
 

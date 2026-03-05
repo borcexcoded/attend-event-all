@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from app.database import engine, Base
-from app.routes import register, recognize, attendance_routes, members, auth_routes, import_routes, visitor_routes, meeting_routes
+from app.routes import register, recognize, attendance_routes, members, auth_routes, import_routes, visitor_routes, meeting_routes, analytics_routes, branch_routes
 
 # Create all DB tables
 Base.metadata.create_all(bind=engine)
@@ -58,6 +58,8 @@ app.include_router(members.router, prefix="/api")
 app.include_router(import_routes.router, prefix="/api")
 app.include_router(visitor_routes.router, prefix="/api")
 app.include_router(meeting_routes.router, prefix="/api")
+app.include_router(analytics_routes.router, prefix="/api")
+app.include_router(branch_routes.router, prefix="/api")
 
 
 @app.get("/api/health")
