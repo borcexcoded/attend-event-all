@@ -4,6 +4,7 @@ from app.models.meeting import Meeting
 from app.models.organization import Organization, Admin
 from app.models.visitor import Visitor
 from app.models.branch import Branch, BranchAdmin, JointService, JointServiceBranch
+from app.models.registration_field import RegistrationField, MemberCustomData
 
 __all__ = [
     "User",
@@ -16,4 +17,6 @@ __all__ = [
     "BranchAdmin",
     "JointService",
     "JointServiceBranch",
+    "RegistrationField",
+    "MemberCustomData",
 ]

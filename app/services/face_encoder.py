@@ -1,6 +1,8 @@
-import face_recognition
+from app.face_engine import get_engine
 
 
-def encode_face(image, face_locations):
-    """Encode faces found at given locations."""
-    return face_recognition.face_encodings(image, face_locations)
+def encode_face(image, face_locations=None):
+    """Encode faces found in image using InsightFace ArcFace."""
+    engine = get_engine()
+    results = engine.detect_and_encode(image)
+    return [r["embedding"] for r in results]

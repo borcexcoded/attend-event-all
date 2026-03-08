@@ -1,0 +1,1719 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>@ttend — Admin Console</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-font-smoothing: antialiased;
+      }
+      :root {
+        --bg: #ffffff;
+        --bg2: #f5f5f7;
+        --bg3: #fbfbfd;
+        --fg: #1d1d1f;
+        --fg2: #6e6e73;
+        --fg3: #86868b;
+        --green: #25d366;
+        --green-dark: #128c7e;
+        --green-light: #e8fbef;
+        --blue: #0071e3;
+        --blue-light: #e8f2fd;
+        --orange: #ff9f0a;
+        --orange-light: #fff8eb;
+        --red: #ff3b30;
+        --red-light: #fff0ef;
+        --purple: #af52de;
+        --purple-light: #f5eefb;
+        --border: #d2d2d7;
+        --border-light: #e8e8ed;
+        --shadow-sm:
+          0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+        --shadow-md:
+          0 4px 14px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.04);
+        --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.08);
+        --r: 16px;
+        --rs: 12px;
+        --rx: 8px;
+        --sw: 240px;
+        --tr: 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI",
+          Roboto, Helvetica, Arial, sans-serif;
+        background: var(--bg2);
+        color: var(--fg);
+        line-height: 1.47;
+      }
+      ::selection {
+        background: var(--purple);
+        color: #fff;
+      }
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 3px;
+      }
+      a {
+        text-decoration: none;
+        color: inherit;
+      }
+      .app {
+        display: flex;
+        min-height: 100vh;
+      }
+
+      /* SIDEBAR */
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: var(--sw);
+        height: 100vh;
+        background: #fff;
+        border-right: 1px solid var(--border-light);
+        display: flex;
+        flex-direction: column;
+        z-index: 40;
+      }
+      .sidebar-brand {
+        padding: 24px 20px 16px;
+      }
+      .sidebar-brand h1 {
+        font-size: 16px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--purple);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .sidebar-brand h1 svg {
+        width: 20px;
+        height: 20px;
+        color: var(--purple);
+      }
+      .sidebar-brand p {
+        font-size: 11px;
+        color: var(--fg3);
+        margin-top: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .sidebar-badge {
+        display: inline-block;
+        font-size: 9px;
+        font-weight: 700;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: var(--purple-light);
+        color: var(--purple);
+        margin-left: 6px;
+        vertical-align: middle;
+      }
+      .sidebar-nav {
+        padding: 0 10px;
+        flex: 1;
+        overflow-y: auto;
+      }
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 12px;
+        margin-bottom: 2px;
+        border-radius: var(--rx);
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--fg2);
+        cursor: pointer;
+        border: none;
+        background: none;
+        width: 100%;
+        text-align: left;
+        transition: all var(--tr);
+      }
+      .nav-item:hover {
+        background: var(--bg2);
+        color: var(--fg);
+      }
+      .nav-item.active {
+        background: var(--purple);
+        color: #fff;
+      }
+      .nav-item.active svg {
+        color: #fff;
+      }
+      .nav-item svg {
+        width: 17px;
+        height: 17px;
+        flex-shrink: 0;
+        color: var(--fg3);
+        transition: color var(--tr);
+      }
+      .nav-item:hover svg {
+        color: var(--fg);
+      }
+      .nav-sep {
+        height: 1px;
+        background: var(--border-light);
+        margin: 12px 16px;
+      }
+      .sidebar-footer {
+        padding: 16px 20px;
+        border-top: 1px solid var(--border-light);
+      }
+      .sidebar-footer .user-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        padding: 4px 0;
+      }
+      .sidebar-footer .user-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: var(--purple-light);
+        color: var(--purple);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 700;
+        flex-shrink: 0;
+      }
+      .sidebar-footer .user-info {
+        min-width: 0;
+        flex: 1;
+      }
+      .sidebar-footer .user-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--fg);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .sidebar-footer .user-email {
+        font-size: 11px;
+        color: var(--fg3);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /* MAIN */
+      .main {
+        margin-left: var(--sw);
+        flex: 1;
+        min-height: 100vh;
+        padding: 28px 32px;
+      }
+      .main h2 {
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        margin-bottom: 4px;
+      }
+      .main .page-sub {
+        font-size: 13px;
+        color: var(--fg3);
+        margin-bottom: 24px;
+      }
+
+      /* PAGE SECTIONS */
+      .page {
+        display: none;
+      }
+      .page.active {
+        display: block;
+      }
+
+      /* CARDS */
+      .card {
+        background: #fff;
+        border-radius: var(--r);
+        padding: 20px;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--border-light);
+        margin-bottom: 16px;
+      }
+      .card h3 {
+        font-size: 15px;
+        font-weight: 700;
+        margin-bottom: 12px;
+      }
+      .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 14px;
+        margin-bottom: 20px;
+      }
+      .stat-card {
+        background: #fff;
+        border-radius: var(--rs);
+        padding: 16px;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--border-light);
+      }
+      .stat-card .label {
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--fg3);
+      }
+      .stat-card .num {
+        font-size: 28px;
+        font-weight: 700;
+        margin-top: 4px;
+      }
+      .stat-card .sub {
+        font-size: 11px;
+        color: var(--fg3);
+        margin-top: 2px;
+      }
+
+      /* FORMS */
+      .form-group {
+        margin-bottom: 14px;
+      }
+      .form-label {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--fg2);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 5px;
+      }
+      .form-input,
+      .form-select {
+        width: 100%;
+        padding: 10px 14px;
+        border: 1px solid var(--border);
+        border-radius: var(--rx);
+        font-size: 14px;
+        color: var(--fg);
+        font-family: inherit;
+        background: #fff;
+        transition: all 0.2s;
+        outline: none;
+      }
+      .form-input:focus,
+      .form-select:focus {
+        border-color: var(--purple);
+        box-shadow: 0 0 0 3px rgba(175, 82, 222, 0.12);
+      }
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      @media (max-width: 640px) {
+        .form-row {
+          grid-template-columns: 1fr;
+        }
+      }
+      .form-input-sm {
+        padding: 8px 12px;
+        font-size: 13px;
+      }
+
+      /* BUTTONS */
+      .btn {
+        padding: 10px 20px;
+        border-radius: var(--rx);
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .btn svg {
+        width: 14px;
+        height: 14px;
+      }
+      .btn-purple {
+        background: var(--purple);
+        color: #fff;
+      }
+      .btn-purple:hover {
+        background: #9333bd;
+        transform: translateY(-1px);
+      }
+      .btn-green {
+        background: var(--green);
+        color: #fff;
+      }
+      .btn-green:hover {
+        background: var(--green-dark);
+      }
+      .btn-ghost {
+        background: transparent;
+        color: var(--fg2);
+        border: 1px solid var(--border);
+      }
+      .btn-ghost:hover {
+        background: var(--bg2);
+      }
+      .btn-ghost.danger:hover {
+        background: var(--red-light);
+        color: var(--red);
+        border-color: var(--red);
+      }
+      .btn-sm {
+        padding: 6px 12px;
+        font-size: 12px;
+      }
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      /* TABLE */
+      .table-wrap {
+        overflow-x: auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      thead th {
+        text-align: left;
+        padding: 10px 14px;
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--fg3);
+        background: var(--bg2);
+        border-bottom: 1px solid var(--border-light);
+      }
+      tbody td {
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--border-light);
+        vertical-align: middle;
+      }
+      tbody tr:hover {
+        background: var(--bg3);
+      }
+      .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 99px;
+        font-size: 10px;
+        font-weight: 600;
+      }
+      .badge-green {
+        background: var(--green-light);
+        color: var(--green-dark);
+      }
+      .badge-purple {
+        background: var(--purple-light);
+        color: var(--purple);
+      }
+      .badge-orange {
+        background: var(--orange-light);
+        color: #c47e00;
+      }
+      .badge-red {
+        background: var(--red-light);
+        color: var(--red);
+      }
+      .badge-blue {
+        background: var(--blue-light);
+        color: var(--blue);
+      }
+
+      /* TOAST */
+      .toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        border-radius: var(--rx);
+        font-size: 13px;
+        font-weight: 500;
+        z-index: 9999;
+        box-shadow: var(--shadow-lg);
+        transition: all 0.3s;
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      .toast.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .toast.success {
+        background: #065f46;
+        color: #fff;
+      }
+      .toast.error {
+        background: #991b1b;
+        color: #fff;
+      }
+
+      /* MODAL */
+      .modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(6px);
+        z-index: 100;
+        align-items: center;
+        justify-content: center;
+      }
+      .modal-overlay.show {
+        display: flex;
+      }
+      .modal-box {
+        background: #fff;
+        border-radius: var(--r);
+        width: 480px;
+        max-width: calc(100vw - 40px);
+        max-height: calc(100vh - 80px);
+        overflow-y: auto;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        padding: 28px;
+      }
+      .modal-box h3 {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 4px;
+      }
+      .modal-box .sub {
+        font-size: 13px;
+        color: var(--fg3);
+        margin-bottom: 20px;
+      }
+
+      /* EMPTY STATE */
+      .empty {
+        padding: 40px 20px;
+        text-align: center;
+        color: var(--fg3);
+      }
+      .empty svg {
+        width: 48px;
+        height: 48px;
+        margin-bottom: 12px;
+        color: var(--border);
+      }
+      .empty h4 {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--fg2);
+        margin-bottom: 4px;
+      }
+      .empty p {
+        font-size: 13px;
+      }
+
+      /* FIELD ITEM */
+      .field-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        border-radius: var(--rx);
+        background: var(--bg2);
+        margin-bottom: 8px;
+      }
+      .field-item .fi-num {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--fg3);
+        width: 24px;
+        text-align: center;
+      }
+      .field-item .fi-body {
+        flex: 1;
+        min-width: 0;
+      }
+      .field-item .fi-label {
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .field-item .fi-meta {
+        font-size: 11px;
+        color: var(--fg3);
+      }
+
+      /* RESPONSIVE */
+      @media (max-width: 768px) {
+        .sidebar {
+          transform: translateX(-100%);
+        }
+        .sidebar.open {
+          transform: translateX(0);
+        }
+        .main {
+          margin-left: 0;
+        }
+        .card-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      @media (max-width: 480px) {
+        .card-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <!-- SIDEBAR -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+          <h1>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+            @ttend <span class="sidebar-badge">ADMIN</span>
+          </h1>
+          <p id="orgNameSidebar">Organization</p>
+        </div>
+        <nav class="sidebar-nav">
+          <button class="nav-item active" onclick="showPage('overview')">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
+            </svg>
+            Overview
+          </button>
+          <button class="nav-item" onclick="showPage('branches')">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+            Branches
+          </button>
+          <button class="nav-item" onclick="showPage('credentials')">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+            Credentials
+          </button>
+          <button class="nav-item" onclick="showPage('formdesigner')">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+              />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+              <polyline points="10 9 9 9 8 9" />
+            </svg>
+            Form Designer
+          </button>
+          <div class="nav-sep"></div>
+          <button class="nav-item" onclick="window.location.href = '/app'">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+              <polyline points="10 17 15 12 10 7" />
+              <line x1="15" y1="12" x2="3" y2="12" />
+            </svg>
+            Go to Dashboard
+          </button>
+        </nav>
+        <div class="sidebar-footer">
+          <div class="user-row" onclick="logout()">
+            <div class="user-avatar" id="userAvatar">A</div>
+            <div class="user-info">
+              <div class="user-name" id="userName">Admin</div>
+              <div class="user-email" id="userEmail">admin@org.com</div>
+            </div>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+          </div>
+        </div>
+      </aside>
+
+      <!-- MAIN CONTENT -->
+      <main class="main">
+        <!-- ======================== OVERVIEW ======================== -->
+        <div class="page active" id="page-overview">
+          <h2>Organization Overview</h2>
+          <p class="page-sub">Manage your organization from here</p>
+          <div class="card-grid" id="overviewStats">
+            <div class="stat-card">
+              <div class="label">Branches</div>
+              <div class="num" id="statBranches">-</div>
+              <div class="sub">Active locations</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Total Members</div>
+              <div class="num" id="statMembers">-</div>
+              <div class="sub">Across all branches</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Team Members</div>
+              <div class="num" id="statTeam">-</div>
+              <div class="sub">Admin accounts</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Custom Fields</div>
+              <div class="num" id="statFields">-</div>
+              <div class="sub">Registration form</div>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Quick Actions</h3>
+            <div
+              style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px"
+            >
+              <button
+                class="btn btn-purple"
+                onclick="
+                  showPage('branches');
+                  openCreateBranch();
+                "
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                New Branch
+              </button>
+              <button
+                class="btn btn-green"
+                onclick="
+                  showPage('credentials');
+                  openCreateCred();
+                "
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="8.5" cy="7" r="4" />
+                  <line x1="20" y1="8" x2="20" y2="14" />
+                  <line x1="23" y1="11" x2="17" y2="11" />
+                </svg>
+                New Credential
+              </button>
+              <button class="btn btn-ghost" onclick="showPage('formdesigner')">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
+                  />
+                  <path
+                    d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
+                  />
+                </svg>
+                Design Form
+              </button>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Branches Overview</h3>
+            <div id="overviewBranches">
+              <div class="empty"><p>Loading...</p></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ======================== BRANCHES ======================== -->
+        <div class="page" id="page-branches">
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              margin-bottom: 4px;
+            "
+          >
+            <h2>Branches</h2>
+            <button class="btn btn-purple" onclick="openCreateBranch()">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              New Branch
+            </button>
+          </div>
+          <p class="page-sub">
+            Create and manage branches/locations for your organization
+          </p>
+          <div id="branchList">
+            <div class="empty"><p>Loading...</p></div>
+          </div>
+        </div>
+
+        <!-- ======================== CREDENTIALS ======================== -->
+        <div class="page" id="page-credentials">
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              margin-bottom: 4px;
+            "
+          >
+            <h2>Branch Credentials</h2>
+            <button class="btn btn-purple" onclick="openCreateCred()">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="8.5" cy="7" r="4" />
+                <line x1="20" y1="8" x2="20" y2="14" />
+                <line x1="23" y1="11" x2="17" y2="11" />
+              </svg>
+              New Credential
+            </button>
+          </div>
+          <p class="page-sub">
+            Create sign-in credentials for each branch to use
+          </p>
+          <div id="credList">
+            <div class="empty"><p>Loading...</p></div>
+          </div>
+        </div>
+
+        <!-- ======================== FORM DESIGNER ======================== -->
+        <div class="page" id="page-formdesigner">
+          <h2>Registration Form Designer</h2>
+          <p class="page-sub">
+            Design the member registration form — these fields appear when
+            registering new members in any branch
+          </p>
+          <div
+            style="
+              display: grid;
+              grid-template-columns: 1fr 340px;
+              gap: 20px;
+              align-items: start;
+            "
+          >
+            <div class="card">
+              <h3>Current Fields</h3>
+              <p
+                style="font-size: 12px; color: var(--fg3); margin-bottom: 14px"
+              >
+                Built-in fields: <strong>Name</strong>, <strong>Email</strong>,
+                <strong>Phone</strong>, <strong>Photo</strong> — always
+                included.
+              </p>
+              <div id="fieldsList">
+                <div class="empty"><p>Loading...</p></div>
+              </div>
+            </div>
+            <div class="card" style="position: sticky; top: 28px">
+              <h3>Add Custom Field</h3>
+              <form id="addFieldForm">
+                <div class="form-group">
+                  <label class="form-label">Field Label</label>
+                  <input
+                    class="form-input form-input-sm"
+                    id="cfLabel"
+                    placeholder="e.g. Address, Date of Birth"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Field Type</label>
+                  <select class="form-select form-input-sm" id="cfType">
+                    <option value="text">Text</option>
+                    <option value="email">Email</option>
+                    <option value="phone">Phone</option>
+                    <option value="number">Number</option>
+                    <option value="date">Date</option>
+                    <option value="textarea">Text Area</option>
+                    <option value="select">Dropdown</option>
+                  </select>
+                </div>
+                <div
+                  class="form-group"
+                  id="cfOptionsWrap"
+                  style="display: none"
+                >
+                  <label class="form-label">Options (comma-separated)</label>
+                  <input
+                    class="form-input form-input-sm"
+                    id="cfOptions"
+                    placeholder="Male, Female, Other"
+                  />
+                </div>
+                <div class="form-group">
+                  <label
+                    style="
+                      display: flex;
+                      align-items: center;
+                      gap: 8px;
+                      font-size: 13px;
+                      cursor: pointer;
+                    "
+                  >
+                    <input type="checkbox" id="cfRequired" /> Required field
+                  </label>
+                </div>
+                <button
+                  type="submit"
+                  class="btn btn-purple"
+                  style="width: 100%"
+                >
+                  Add Field
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- CREATE BRANCH MODAL -->
+    <div class="modal-overlay" id="branchModal">
+      <div class="modal-box">
+        <h3 id="branchModalTitle">Create New Branch</h3>
+        <p class="sub">Add a new location/branch to your organization</p>
+        <form id="branchForm">
+          <input type="hidden" id="brEditId" value="" />
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Branch Name *</label>
+              <input
+                class="form-input"
+                id="brName"
+                placeholder="e.g. City Campus"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Branch Code</label>
+              <input
+                class="form-input"
+                id="brCode"
+                placeholder="e.g. CITY01"
+                maxlength="10"
+              />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Address</label>
+            <input
+              class="form-input"
+              id="brAddress"
+              placeholder="123 Main Street"
+            />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">City</label>
+              <input class="form-input" id="brCity" placeholder="City" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Country</label>
+              <input class="form-input" id="brCountry" placeholder="Country" />
+            </div>
+          </div>
+          <div style="display: flex; gap: 10px; margin-top: 8px">
+            <button
+              type="submit"
+              class="btn btn-purple"
+              id="brSubmitBtn"
+              style="flex: 1"
+            >
+              Create Branch
+            </button>
+            <button
+              type="button"
+              class="btn btn-ghost"
+              onclick="closeBranchModal()"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- CREATE CREDENTIAL MODAL -->
+    <div class="modal-overlay" id="credModal">
+      <div class="modal-box">
+        <h3>Create Branch Credential</h3>
+        <p class="sub">Create a sign-in account for a branch to use</p>
+        <form id="credForm">
+          <div class="form-group">
+            <label class="form-label">Full Name *</label>
+            <input
+              class="form-input"
+              id="crName"
+              placeholder="Branch admin name"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email *</label>
+            <input
+              class="form-input"
+              type="email"
+              id="crEmail"
+              placeholder="branch@org.com"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password *</label>
+            <input
+              class="form-input"
+              type="password"
+              id="crPassword"
+              placeholder="Min 6 characters"
+              minlength="6"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Assign to Branch *</label>
+            <select class="form-select" id="crBranch" required>
+              <option value="">Select a branch...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Role</label>
+            <select class="form-select" id="crRole">
+              <option value="admin">
+                Admin (can manage members & attendance)
+              </option>
+              <option value="viewer">Viewer (read-only)</option>
+            </select>
+          </div>
+          <div style="display: flex; gap: 10px; margin-top: 8px">
+            <button
+              type="submit"
+              class="btn btn-green"
+              id="crSubmitBtn"
+              style="flex: 1"
+            >
+              Create Credential
+            </button>
+            <button
+              type="button"
+              class="btn btn-ghost"
+              onclick="closeCredModal()"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+        <div
+          id="credResult"
+          style="
+            display: none;
+            margin-top: 16px;
+            padding: 16px;
+            background: var(--green-light);
+            border-radius: var(--rx);
+            border: 1px solid rgba(37, 211, 102, 0.2);
+          "
+        >
+          <div
+            style="
+              font-size: 13px;
+              font-weight: 600;
+              color: var(--green-dark);
+              margin-bottom: 8px;
+            "
+          >
+            ✓ Credential Created Successfully
+          </div>
+          <div style="font-size: 12px; color: var(--fg2); line-height: 1.8">
+            <div><strong>Email:</strong> <span id="crResEmail"></span></div>
+            <div><strong>Password:</strong> <span id="crResPass"></span></div>
+            <div><strong>Branch:</strong> <span id="crResBranch"></span></div>
+          </div>
+          <p style="font-size: 11px; color: var(--fg3); margin-top: 8px">
+            Share these credentials with the branch administrator. They will use
+            this to sign in at the branch dashboard.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+      // ==================== AUTH ====================
+      const TOKEN = localStorage.getItem("token");
+      const ADMIN = JSON.parse(localStorage.getItem("admin") || "{}");
+      const ORG = JSON.parse(localStorage.getItem("org") || "{}");
+      let BRANCH = JSON.parse(localStorage.getItem("branch") || "{}");
+      let BRANCHES = JSON.parse(localStorage.getItem("branches") || "[]");
+
+      if (!TOKEN) {
+        window.location.href = "/";
+      }
+      // Only owners should access admin console
+      if (ADMIN.role && ADMIN.role !== "owner") {
+        window.location.href = "/app";
+      }
+
+      function authHeaders() {
+        return { Authorization: "Bearer " + TOKEN };
+      }
+
+      async function api(path, opts = {}) {
+        const res = await fetch("/api" + path, {
+          ...opts,
+          headers: { ...authHeaders(), ...opts.headers },
+        });
+        if (res.status === 401) {
+          logout();
+          return;
+        }
+        return res;
+      }
+      async function apiGet(path) {
+        const r = await api(path);
+        return r.json();
+      }
+      async function apiPost(path, body) {
+        const r = await api(path, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.detail || "Request failed");
+        return d;
+      }
+      async function apiPut(path, body) {
+        const r = await api(path, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.detail || "Request failed");
+        return d;
+      }
+      async function apiDel(path) {
+        const r = await api(path, { method: "DELETE" });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.detail || "Request failed");
+        return d;
+      }
+
+      function esc(s) {
+        const d = document.createElement("div");
+        d.textContent = s || "";
+        return d.innerHTML;
+      }
+
+      function logout() {
+        localStorage.clear();
+        window.location.href = "/";
+      }
+
+      function showToast(msg, type = "success") {
+        const t = document.getElementById("toast");
+        t.textContent = msg;
+        t.className = "toast show " + type;
+        setTimeout(() => {
+          t.className = "toast";
+        }, 3000);
+      }
+
+      // ==================== PAGE NAVIGATION ====================
+      function showPage(name) {
+        document
+          .querySelectorAll(".page")
+          .forEach((p) => p.classList.remove("active"));
+        document
+          .querySelectorAll(".nav-item")
+          .forEach((n) => n.classList.remove("active"));
+        const page = document.getElementById("page-" + name);
+        if (page) page.classList.add("active");
+        // Find matching nav item
+        document.querySelectorAll(".nav-item").forEach((n) => {
+          if (
+            n.textContent.trim().toLowerCase().replace(/\s+/g, "") ===
+            name.toLowerCase()
+          )
+            n.classList.add("active");
+        });
+        // Load data for the page
+        if (name === "overview") loadOverview();
+        else if (name === "branches") loadBranches();
+        else if (name === "credentials") loadCredentials();
+        else if (name === "formdesigner") loadFields();
+      }
+
+      // Set user info
+      document.getElementById("userName").textContent =
+        ADMIN.full_name || "Admin";
+      document.getElementById("userEmail").textContent = ADMIN.email || "";
+      document.getElementById("userAvatar").textContent = (
+        ADMIN.full_name || "A"
+      )
+        .charAt(0)
+        .toUpperCase();
+      document.getElementById("orgNameSidebar").textContent =
+        ORG.name || "Organization";
+
+      // ==================== OVERVIEW ====================
+      async function loadOverview() {
+        try {
+          const [brData, teamData, fieldData, memData] = await Promise.all([
+            apiGet("/branches"),
+            apiGet("/auth/team"),
+            apiGet("/registration-fields/"),
+            apiGet("/members"),
+          ]);
+          document.getElementById("statBranches").textContent =
+            (brData.branches || brData || []).length || 0;
+          document.getElementById("statTeam").textContent =
+            (teamData.team || []).length || 0;
+          document.getElementById("statFields").textContent =
+            (fieldData.fields || []).length || 0;
+          const members = memData.members || memData || [];
+          document.getElementById("statMembers").textContent =
+            members.length || 0;
+
+          // Branches overview cards
+          const branches = brData.branches || brData || [];
+          if (branches.length === 0) {
+            document.getElementById("overviewBranches").innerHTML =
+              '<div class="empty"><h4>No branches yet</h4><p>Create your first branch to get started</p></div>';
+          } else {
+            document.getElementById("overviewBranches").innerHTML =
+              '<div class="card-grid">' +
+              branches
+                .map(
+                  (b) =>
+                    '<div class="stat-card">' +
+                    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">' +
+                    '<div style="width:32px;height:32px;border-radius:8px;background:var(--purple-light);color:var(--purple);display:flex;align-items:center;justify-content:center;font-size:14px">📍</div>' +
+                    '<div><div style="font-size:13px;font-weight:600">' +
+                    esc(b.name) +
+                    "</div>" +
+                    (b.is_headquarters
+                      ? '<span class="badge badge-purple" style="font-size:9px">HQ</span>'
+                      : "") +
+                    "</div>" +
+                    "</div>" +
+                    '<div style="font-size:12px;color:var(--fg3)">' +
+                    (b.member_count != null
+                      ? b.member_count + " members"
+                      : "") +
+                    (b.code ? " · " + esc(b.code) : "") +
+                    "</div>" +
+                    "</div>",
+                )
+                .join("") +
+              "</div>";
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+
+      // ==================== BRANCHES ====================
+      let _branches = [];
+      async function loadBranches() {
+        try {
+          const data = await apiGet("/branches");
+          _branches = data.branches || data || [];
+          if (_branches.length === 0) {
+            document.getElementById("branchList").innerHTML =
+              '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><h4>No branches yet</h4><p>Create your first branch to get started</p></div>';
+            return;
+          }
+          document.getElementById("branchList").innerHTML =
+            '<div class="card table-wrap"><table><thead><tr>' +
+            "<th>Branch</th><th>Code</th><th>Location</th><th>Members</th><th>Status</th><th></th>" +
+            "</tr></thead><tbody>" +
+            _branches
+              .map(
+                (b) =>
+                  "<tr>" +
+                  '<td><div style="font-weight:600">' +
+                  esc(b.name) +
+                  "</div>" +
+                  (b.is_headquarters
+                    ? '<span class="badge badge-purple" style="margin-top:2px">HQ</span>'
+                    : "") +
+                  "</td>" +
+                  '<td><span style="font-family:monospace;font-size:12px;color:var(--fg3)">' +
+                  esc(b.code || "-") +
+                  "</span></td>" +
+                  '<td style="color:var(--fg3)">' +
+                  esc([b.city, b.country].filter(Boolean).join(", ") || "-") +
+                  "</td>" +
+                  "<td>" +
+                  (b.member_count != null ? b.member_count : "-") +
+                  "</td>" +
+                  '<td><span class="badge ' +
+                  (b.is_active !== false ? "badge-green" : "badge-red") +
+                  '">' +
+                  (b.is_active !== false ? "Active" : "Inactive") +
+                  "</span></td>" +
+                  '<td style="text-align:right">' +
+                  '<button class="btn btn-ghost btn-sm" onclick="editBranch(' +
+                  b.id +
+                  ')" style="margin-right:4px">Edit</button>' +
+                  (b.is_headquarters
+                    ? ""
+                    : '<button class="btn btn-ghost btn-sm danger" onclick="deleteBranch(' +
+                      b.id +
+                      ",'" +
+                      esc(b.name).replace(/'/g, "\\'") +
+                      "')\">Delete</button>") +
+                  "</td>" +
+                  "</tr>",
+              )
+              .join("") +
+            "</tbody></table></div>";
+        } catch (err) {
+          document.getElementById("branchList").innerHTML =
+            '<div class="empty"><p>Failed to load branches</p></div>';
+        }
+      }
+
+      function openCreateBranch() {
+        document.getElementById("brEditId").value = "";
+        document.getElementById("branchModalTitle").textContent =
+          "Create New Branch";
+        document.getElementById("brSubmitBtn").textContent = "Create Branch";
+        document.getElementById("brName").value = "";
+        document.getElementById("brCode").value = "";
+        document.getElementById("brAddress").value = "";
+        document.getElementById("brCity").value = "";
+        document.getElementById("brCountry").value = "";
+        document.getElementById("branchModal").classList.add("show");
+      }
+
+      function editBranch(id) {
+        const b = _branches.find((x) => x.id === id);
+        if (!b) return;
+        document.getElementById("brEditId").value = id;
+        document.getElementById("branchModalTitle").textContent = "Edit Branch";
+        document.getElementById("brSubmitBtn").textContent = "Save Changes";
+        document.getElementById("brName").value = b.name || "";
+        document.getElementById("brCode").value = b.code || "";
+        document.getElementById("brAddress").value = b.address || "";
+        document.getElementById("brCity").value = b.city || "";
+        document.getElementById("brCountry").value = b.country || "";
+        document.getElementById("branchModal").classList.add("show");
+      }
+
+      function closeBranchModal() {
+        document.getElementById("branchModal").classList.remove("show");
+      }
+      document
+        .getElementById("branchModal")
+        .addEventListener("click", function (e) {
+          if (e.target === this) closeBranchModal();
+        });
+
+      document
+        .getElementById("branchForm")
+        .addEventListener("submit", async function (e) {
+          e.preventDefault();
+          const btn = document.getElementById("brSubmitBtn");
+          btn.disabled = true;
+          const editId = document.getElementById("brEditId").value;
+          const body = {
+            name: document.getElementById("brName").value.trim(),
+            code: document.getElementById("brCode").value.trim() || undefined,
+            address:
+              document.getElementById("brAddress").value.trim() || undefined,
+            city: document.getElementById("brCity").value.trim() || undefined,
+            country:
+              document.getElementById("brCountry").value.trim() || undefined,
+          };
+          try {
+            if (editId) {
+              await apiPut("/branches/" + editId, body);
+              showToast("Branch updated");
+            } else {
+              await apiPost("/branches", body);
+              showToast("Branch created");
+            }
+            closeBranchModal();
+            await loadBranches();
+            // Refresh branches in localStorage
+            const meData = await apiGet("/auth/me");
+            if (meData.branches)
+              localStorage.setItem("branches", JSON.stringify(meData.branches));
+          } catch (err) {
+            showToast(err.message, "error");
+          } finally {
+            btn.disabled = false;
+          }
+        });
+
+      async function deleteBranch(id, name) {
+        if (!confirm('Delete branch "' + name + '"? This will deactivate it.'))
+          return;
+        try {
+          await apiDel("/branches/" + id);
+          showToast("Branch deleted");
+          await loadBranches();
+        } catch (err) {
+          showToast(err.message, "error");
+        }
+      }
+
+      // ==================== CREDENTIALS ====================
+      async function loadCredentials() {
+        try {
+          const [teamData, brData] = await Promise.all([
+            apiGet("/auth/team"),
+            apiGet("/branches"),
+          ]);
+          const team = teamData.team || [];
+          _branches = brData.branches || brData || [];
+
+          // Populate branch select in modal
+          const sel = document.getElementById("crBranch");
+          sel.innerHTML =
+            '<option value="">Select a branch...</option>' +
+            _branches
+              .map(
+                (b) =>
+                  '<option value="' +
+                  b.id +
+                  '">' +
+                  esc(b.name) +
+                  (b.is_headquarters ? " (HQ)" : "") +
+                  "</option>",
+              )
+              .join("");
+
+          if (team.length === 0) {
+            document.getElementById("credList").innerHTML =
+              '<div class="empty"><h4>No credentials yet</h4><p>Create credentials for your branches</p></div>';
+            return;
+          }
+          document.getElementById("credList").innerHTML =
+            '<div class="card table-wrap"><table><thead><tr>' +
+            "<th>Name</th><th>Email</th><th>Branch</th><th>Role</th><th></th>" +
+            "</tr></thead><tbody>" +
+            team
+              .map(
+                (t) =>
+                  "<tr>" +
+                  '<td style="font-weight:500">' +
+                  esc(t.full_name) +
+                  "</td>" +
+                  '<td><span style="color:var(--fg3)">' +
+                  esc(t.email) +
+                  "</span></td>" +
+                  "<td>" +
+                  (t.branch_name
+                    ? '<span class="badge badge-blue">' +
+                      esc(t.branch_name) +
+                      "</span>"
+                    : '<span style="color:var(--fg3)">-</span>') +
+                  "</td>" +
+                  '<td><span class="badge ' +
+                  (t.role === "owner"
+                    ? "badge-purple"
+                    : t.role === "admin"
+                      ? "badge-green"
+                      : "badge-orange") +
+                  '">' +
+                  esc(t.role) +
+                  "</span></td>" +
+                  '<td style="text-align:right">' +
+                  (t.role === "owner"
+                    ? '<span style="font-size:11px;color:var(--fg3)">Owner</span>'
+                    : '<button class="btn btn-ghost btn-sm danger" onclick="removeCred(' +
+                      t.id +
+                      ",'" +
+                      esc(t.full_name).replace(/'/g, "\\'") +
+                      "')\">Remove</button>") +
+                  "</td>" +
+                  "</tr>",
+              )
+              .join("") +
+            "</tbody></table></div>";
+        } catch (err) {
+          document.getElementById("credList").innerHTML =
+            '<div class="empty"><p>Failed to load credentials</p></div>';
+        }
+      }
+
+      function openCreateCred() {
+        document.getElementById("crName").value = "";
+        document.getElementById("crEmail").value = "";
+        document.getElementById("crPassword").value = "";
+        document.getElementById("crRole").value = "admin";
+        document.getElementById("credResult").style.display = "none";
+        document.getElementById("credForm").style.display = "";
+        document.getElementById("credModal").classList.add("show");
+        // Ensure branch select is populated
+        if (document.getElementById("crBranch").options.length <= 1) {
+          apiGet("/branches").then((data) => {
+            const branches = data.branches || data || [];
+            const sel = document.getElementById("crBranch");
+            sel.innerHTML =
+              '<option value="">Select a branch...</option>' +
+              branches
+                .map(
+                  (b) =>
+                    '<option value="' +
+                    b.id +
+                    '">' +
+                    esc(b.name) +
+                    (b.is_headquarters ? " (HQ)" : "") +
+                    "</option>",
+                )
+                .join("");
+          });
+        }
+      }
+
+      function closeCredModal() {
+        document.getElementById("credModal").classList.remove("show");
+      }
+      document
+        .getElementById("credModal")
+        .addEventListener("click", function (e) {
+          if (e.target === this) closeCredModal();
+        });
+
+      document
+        .getElementById("credForm")
+        .addEventListener("submit", async function (e) {
+          e.preventDefault();
+          const btn = document.getElementById("crSubmitBtn");
+          btn.disabled = true;
+          const email = document.getElementById("crEmail").value.trim();
+          const pass = document.getElementById("crPassword").value;
+          const branchId = parseInt(document.getElementById("crBranch").value);
+          const branchName =
+            document.getElementById("crBranch").selectedOptions[0]?.text || "";
+          try {
+            await apiPost("/auth/invite", {
+              full_name: document.getElementById("crName").value.trim(),
+              email: email,
+              password: pass,
+              role: document.getElementById("crRole").value,
+              branch_id: branchId || undefined,
+            });
+            // Show result
+            document.getElementById("crResEmail").textContent = email;
+            document.getElementById("crResPass").textContent = pass;
+            document.getElementById("crResBranch").textContent = branchName;
+            document.getElementById("credForm").style.display = "none";
+            document.getElementById("credResult").style.display = "";
+            showToast("Credential created");
+            await loadCredentials();
+          } catch (err) {
+            showToast(err.message, "error");
+          } finally {
+            btn.disabled = false;
+          }
+        });
+
+      async function removeCred(id, name) {
+        if (
+          !confirm(
+            'Remove credential for "' +
+              name +
+              '"? They will no longer be able to sign in.',
+          )
+        )
+          return;
+        try {
+          await apiDel("/auth/team/" + id);
+          showToast("Credential removed");
+          await loadCredentials();
+        } catch (err) {
+          showToast(err.message, "error");
+        }
+      }
+
+      // ==================== FORM DESIGNER ====================
+      async function loadFields() {
+        try {
+          const data = await apiGet("/registration-fields/");
+          const fields = data.fields || [];
+          document.getElementById("statFields") &&
+            (document.getElementById("statFields").textContent = fields.length);
+          if (fields.length === 0) {
+            document.getElementById("fieldsList").innerHTML =
+              '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><h4>No custom fields</h4><p>Members will register with Name, Email, Phone, and Photo only</p></div>';
+            return;
+          }
+          document.getElementById("fieldsList").innerHTML = fields
+            .map(
+              (f, i) =>
+                '<div class="field-item">' +
+                '<div class="fi-num">' +
+                (i + 1) +
+                "</div>" +
+                '<div class="fi-body">' +
+                '<div class="fi-label">' +
+                esc(f.field_label) +
+                "</div>" +
+                '<div class="fi-meta">' +
+                esc(f.field_type) +
+                (f.is_required ? " · required" : "") +
+                (f.options && f.options.length
+                  ? " · " + f.options.join(", ")
+                  : "") +
+                "</div>" +
+                "</div>" +
+                '<button class="btn btn-ghost btn-sm danger" onclick="removeField(' +
+                f.id +
+                ",'" +
+                esc(f.field_label).replace(/'/g, "\\'") +
+                '\')" title="Remove">' +
+                '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>' +
+                "</button>" +
+                "</div>",
+            )
+            .join("");
+        } catch {
+          document.getElementById("fieldsList").innerHTML =
+            '<div class="empty"><p>Could not load fields</p></div>';
+        }
+      }
+
+      document.getElementById("cfType").addEventListener("change", function () {
+        document.getElementById("cfOptionsWrap").style.display =
+          this.value === "select" ? "" : "none";
+      });
+
+      document
+        .getElementById("addFieldForm")
+        .addEventListener("submit", async function (e) {
+          e.preventDefault();
+          const label = document.getElementById("cfLabel").value.trim();
+          if (!label) return;
+          const type = document.getElementById("cfType").value;
+          const required = document.getElementById("cfRequired").checked;
+          const optStr = document.getElementById("cfOptions").value.trim();
+          const options =
+            type === "select" && optStr
+              ? optStr
+                  .split(",")
+                  .map((s) => s.trim())
+                  .filter(Boolean)
+              : null;
+          const fieldName = label.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+          try {
+            await apiPost("/registration-fields/", {
+              field_name: fieldName,
+              field_label: label,
+              field_type: type,
+              is_required: required,
+              options: options,
+            });
+            showToast('Field "' + label + '" added');
+            document.getElementById("cfLabel").value = "";
+            document.getElementById("cfOptions").value = "";
+            document.getElementById("cfRequired").checked = false;
+            await loadFields();
+          } catch (err) {
+            showToast(err.message || "Failed to add field", "error");
+          }
+        });
+
+      async function removeField(id, label) {
+        if (!confirm('Remove field "' + label + '"?')) return;
+        try {
+          await apiDel("/registration-fields/" + id);
+          showToast("Field removed");
+          await loadFields();
+        } catch {
+          showToast("Failed to remove field", "error");
+        }
+      }
+
+      // ==================== INIT ====================
+      loadOverview();
+    </script>
+  </body>
+</html>

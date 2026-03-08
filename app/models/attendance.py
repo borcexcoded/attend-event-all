@@ -1,3 +1,4 @@
+import uuid as _uuid
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
 from datetime import datetime
 from app.database import Base
@@ -7,6 +8,7 @@ class Attendance(Base):
     __tablename__ = "attendance"
 
     id = Column(Integer, primary_key=True, index=True)
+    uid = Column(String, unique=True, index=True, default=lambda: _uuid.uuid4().hex)
     org_id = Column(Integer, nullable=False, index=True)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=True, index=True)  # Branch where marked
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)  # Linked member (if member)

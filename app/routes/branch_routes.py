@@ -10,8 +10,28 @@ from app.models.branch import Branch, BranchAdmin, JointService, JointServiceBra
 from app.models.user import User
 from app.models.attendance import Attendance
 from app.models.meeting import Meeting
+from app.models.organization import Admin
+from app.auth import get_current_admin
 
 router = APIRouter(prefix="/branches", tags=["Branches"])
+
+
+def _owner_only(admin: Admin):
+    if admin.role != "owner":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only organization owners can perform this action",
+        )
+
+
+def _assert_branch_scope(admin: Admin, branch: Branch):
+    if admin.role == "owner":
+        return
+    if admin.branch_id != branch.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Branch not found",
+        )
 
 
 # ============ SCHEMAS ============
@@ -85,21 +105,26 @@ class JointServiceResponse(BaseModel):
 # ============ BRANCH ENDPOINTS ============
 
 @router.post("/", response_model=BranchResponse)
-def create_branch(branch: BranchCreate, db: Session = Depends(get_db)):
-    """Create a new branch."""
-    # Check if branch code already exists
-    existing = db.query(Branch).filter(Branch.code == branch.code.upper()).first()
+def create_branch(branch: BranchCreate, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+    """Create a new branch (org owner/admin only)."""
+    _owner_only(admin)
+    org_id = admin.org_id
+
+    # Check if branch code already exists within this org
+    existing = db.query(Branch).filter(
+        Branch.code == branch.code.upper(), Branch.org_id == org_id
+    ).first()
     if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Branch with code '{branch.code}' already exists"
         )
     
-    # If this is headquarters, unset any existing headquarters
+    # If this is headquarters, unset any existing headquarters for this org
     if branch.is_headquarters:
-        db.query(Branch).filter(Branch.is_headquarters == True).update(
-            {"is_headquarters": False}
-        )
+        db.query(Branch).filter(
+            Branch.is_headquarters == True, Branch.org_id == org_id
+        ).update({"is_headquarters": False})
     
     new_branch = Branch(
         name=branch.name,
@@ -109,7 +134,7 @@ def create_branch(branch: BranchCreate, db: Session = Depends(get_db)):
         country=branch.country,
         timezone=branch.timezone,
         is_headquarters=branch.is_headquarters,
-        org_id=branch.org_id
+        org_id=org_id
     )
     db.add(new_branch)
     db.commit()
@@ -133,16 +158,18 @@ def create_branch(branch: BranchCreate, db: Session = Depends(get_db)):
 @router.get("/", response_model=List[BranchResponse])
 def get_branches(
     active_only: bool = True,
-    org_id: Optional[int] = None,
+    admin: Admin = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
     """Get all branches with member and meeting counts."""
-    query = db.query(Branch)
+    query = db.query(Branch).filter(Branch.org_id == admin.org_id)
+
+    # Branch-scoped credentials only see their assigned branch.
+    if admin.role != "owner" and admin.branch_id:
+        query = query.filter(Branch.id == admin.branch_id)
     
     if active_only:
         query = query.filter(Branch.is_active == True)
-    if org_id:
-        query = query.filter(Branch.org_id == org_id)
     
     branches = query.order_by(Branch.is_headquarters.desc(), Branch.name).all()
     
@@ -174,14 +201,22 @@ def get_branches(
 
 
 @router.get("/{branch_id}", response_model=BranchResponse)
-def get_branch(branch_id: int, db: Session = Depends(get_db)):
+def get_branch(
+    branch_id: int,
+    admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
     """Get a specific branch by ID."""
-    branch = db.query(Branch).filter(Branch.id == branch_id).first()
+    branch = db.query(Branch).filter(
+        Branch.id == branch_id,
+        Branch.org_id == admin.org_id,
+    ).first()
     if not branch:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Branch not found"
         )
+    _assert_branch_scope(admin, branch)
     
     member_count = db.query(func.count(User.id)).filter(
         User.branch_id == branch.id
@@ -210,10 +245,15 @@ def get_branch(branch_id: int, db: Session = Depends(get_db)):
 def update_branch(
     branch_id: int,
     update_data: BranchUpdate,
-    db: Session = Depends(get_db)
+    admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
 ):
     """Update a branch."""
-    branch = db.query(Branch).filter(Branch.id == branch_id).first()
+    _owner_only(admin)
+    branch = db.query(Branch).filter(
+        Branch.id == branch_id,
+        Branch.org_id == admin.org_id,
+    ).first()
     if not branch:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -251,9 +291,17 @@ def update_branch(
 
 
 @router.delete("/{branch_id}")
-def delete_branch(branch_id: int, db: Session = Depends(get_db)):
+def delete_branch(
+    branch_id: int,
+    admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
     """Deactivate a branch (soft delete)."""
-    branch = db.query(Branch).filter(Branch.id == branch_id).first()
+    _owner_only(admin)
+    branch = db.query(Branch).filter(
+        Branch.id == branch_id,
+        Branch.org_id == admin.org_id,
+    ).first()
     if not branch:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -277,11 +325,16 @@ def delete_branch(branch_id: int, db: Session = Depends(get_db)):
 @router.post("/{branch_id}/admins")
 def add_branch_admin(
     branch_id: int,
-    admin: BranchAdminCreate,
-    db: Session = Depends(get_db)
+    req: BranchAdminCreate,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
 ):
     """Add an admin to a branch."""
-    branch = db.query(Branch).filter(Branch.id == branch_id).first()
+    _owner_only(current_admin)
+    branch = db.query(Branch).filter(
+        Branch.id == branch_id,
+        Branch.org_id == current_admin.org_id,
+    ).first()
     if not branch:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -291,7 +344,7 @@ def add_branch_admin(
     # Check if admin already assigned
     existing = db.query(BranchAdmin).filter(
         BranchAdmin.branch_id == branch_id,
-        BranchAdmin.admin_id == admin.admin_id
+        BranchAdmin.admin_id == req.admin_id
     ).first()
     
     if existing:
@@ -302,9 +355,9 @@ def add_branch_admin(
     
     branch_admin = BranchAdmin(
         branch_id=branch_id,
-        admin_id=admin.admin_id,
-        can_manage_members=admin.can_manage_members,
-        can_view_analytics=admin.can_view_analytics
+        admin_id=req.admin_id,
+        can_manage_members=req.can_manage_members,
+        can_view_analytics=req.can_view_analytics
     )
     db.add(branch_admin)
     db.commit()
@@ -316,10 +369,22 @@ def add_branch_admin(
 def get_branch_members(
     branch_id: int,
     include_global: bool = True,
-    db: Session = Depends(get_db)
+    admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
 ):
     """Get all members belonging to a branch."""
-    query = db.query(User)
+    branch = db.query(Branch).filter(
+        Branch.id == branch_id,
+        Branch.org_id == admin.org_id,
+    ).first()
+    if not branch:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Branch not found")
+    _assert_branch_scope(admin, branch)
+
+    query = db.query(User).filter(User.org_id == admin.org_id)
+
+    if admin.role != "owner":
+        include_global = False
     
     if include_global:
         query = query.filter(
@@ -350,11 +415,17 @@ def get_branch_members(
 @router.post("/joint-services", response_model=JointServiceResponse)
 def create_joint_service(
     service: JointServiceCreate,
-    db: Session = Depends(get_db)
+    admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
 ):
     """Create a joint service across multiple branches."""
+    _owner_only(admin)
+
     # Verify host branch exists
-    host_branch = db.query(Branch).filter(Branch.id == service.host_branch_id).first()
+    host_branch = db.query(Branch).filter(
+        Branch.id == service.host_branch_id,
+        Branch.org_id == admin.org_id,
+    ).first()
     if not host_branch:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -363,6 +434,7 @@ def create_joint_service(
     
     # Create joint service
     joint_service = JointService(
+        org_id=admin.org_id,
         name=service.name,
         description=service.description,
         host_branch_id=service.host_branch_id,
@@ -375,7 +447,10 @@ def create_joint_service(
     # Add participating branches
     branch_names = []
     for branch_id in service.branch_ids:
-        branch = db.query(Branch).filter(Branch.id == branch_id).first()
+        branch = db.query(Branch).filter(
+            Branch.id == branch_id,
+            Branch.org_id == admin.org_id,
+        ).first()
         if branch:
             jsb = JointServiceBranch(
                 joint_service_id=joint_service.id,
@@ -401,10 +476,11 @@ def create_joint_service(
 @router.get("/joint-services")
 def get_joint_services(
     upcoming_only: bool = False,
-    db: Session = Depends(get_db)
+    admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
 ):
     """Get all joint services."""
-    query = db.query(JointService)
+    query = db.query(JointService).filter(JointService.org_id == admin.org_id)
     
     if upcoming_only:
         query = query.filter(JointService.service_date >= datetime.utcnow())
@@ -430,6 +506,12 @@ def get_joint_services(
         attendance_count = db.query(func.count(Attendance.id)).filter(
             Attendance.joint_service_id == service.id
         ).scalar() or 0
+
+        if admin.role != "owner" and admin.branch_id:
+            if service.host_branch_id != admin.branch_id and admin.branch_id not in [
+                jsb.branch_id for jsb in jsb_records
+            ]:
+                continue
         
         result.append({
             "id": service.id,
@@ -448,15 +530,31 @@ def get_joint_services(
 @router.get("/joint-services/{service_id}/attendance")
 def get_joint_service_attendance(
     service_id: int,
-    db: Session = Depends(get_db)
+    admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
 ):
     """Get attendance breakdown for a joint service by branch."""
-    service = db.query(JointService).filter(JointService.id == service_id).first()
+    service = db.query(JointService).filter(
+        JointService.id == service_id,
+        JointService.org_id == admin.org_id,
+    ).first()
     if not service:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Joint service not found"
         )
+
+    if admin.role != "owner" and admin.branch_id:
+        if service.host_branch_id != admin.branch_id:
+            participant = db.query(JointServiceBranch).filter(
+                JointServiceBranch.joint_service_id == service.id,
+                JointServiceBranch.branch_id == admin.branch_id,
+            ).first()
+            if not participant:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Joint service not found",
+                )
     
     # Get attendance grouped by branch
     attendance_by_branch = db.query(

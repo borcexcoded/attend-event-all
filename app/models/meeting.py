@@ -1,5 +1,6 @@
 """Meeting / scheduled service model – recurring events like Sunday Service, Bible Study, etc."""
 
+import uuid as _uuid
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
 from datetime import datetime
 from app.database import Base
@@ -9,6 +10,7 @@ class Meeting(Base):
     __tablename__ = "meetings"
 
     id = Column(Integer, primary_key=True, index=True)
+    uid = Column(String, unique=True, index=True, default=lambda: _uuid.uuid4().hex)
     org_id = Column(Integer, nullable=False, index=True)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=True, index=True)  # Branch-specific or org-wide if NULL
     name = Column(String, nullable=False)               # e.g. "Sunday Service", "Bible Study"

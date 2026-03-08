@@ -22,4 +22,5 @@ class Admin(Base):
     password_hash = Column(String, nullable=False)
     full_name = Column(String, nullable=False)
     role = Column(String, default="admin")  # owner, admin, viewer
+    branch_id = Column(Integer, nullable=True, index=True)  # current active branch
     created_at = Column(DateTime, default=datetime.utcnow)

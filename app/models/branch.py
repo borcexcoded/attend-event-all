@@ -11,14 +11,15 @@ class Branch(Base):
     __tablename__ = "branches"
 
     id = Column(Integer, primary_key=True, index=True)
-    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
-    name = Column(String, nullable=False)                   # e.g., "Main Campus", "Tema Branch"
-    code = Column(String, nullable=True, index=True)        # Short code like "MC", "TB"
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, index=True)
+    name = Column(String, nullable=False)
+    code = Column(String, nullable=True, index=True)
     address = Column(String, nullable=True)
     city = Column(String, nullable=True)
-    is_headquarters = Column(Boolean, default=False)        # Main/HQ branch
+    country = Column(String, nullable=True)
+    is_headquarters = Column(Boolean, default=False)
     is_active = Column(Boolean, default=True)
-    timezone = Column(String, default="Africa/Accra")       # For accurate time tracking
+    timezone = Column(String, default="Africa/Lagos")
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -29,8 +30,10 @@ class BranchAdmin(Base):
     id = Column(Integer, primary_key=True, index=True)
     admin_id = Column(Integer, ForeignKey("admins.id"), nullable=False, index=True)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False, index=True)
-    role = Column(String, default="admin")  # "owner", "admin", "viewer"
-    can_view_all_branches = Column(Boolean, default=False)  # HQ admins see all
+    role = Column(String, default="admin")
+    can_manage_members = Column(Boolean, default=True)
+    can_view_analytics = Column(Boolean, default=True)
+    can_view_all_branches = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -39,11 +42,11 @@ class JointService(Base):
     __tablename__ = "joint_services"
 
     id = Column(Integer, primary_key=True, index=True)
-    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
-    meeting_id = Column(Integer, ForeignKey("meetings.id"), nullable=False)
-    host_branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)  # Where it's held
-    name = Column(String, nullable=False)  # e.g., "Easter Joint Service"
-    date = Column(DateTime, nullable=False)
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, index=True)
+    host_branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
+    name = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    service_date = Column(DateTime, nullable=False)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 

@@ -1,5 +1,6 @@
 """Visitor / unknown face model – for faces detected but not yet matched to a member."""
 
+import uuid as _uuid
 from sqlalchemy import Column, Integer, String, LargeBinary, DateTime, Boolean, ForeignKey
 from datetime import datetime
 from app.database import Base
@@ -9,6 +10,7 @@ class Visitor(Base):
     __tablename__ = "visitors"
 
     id = Column(Integer, primary_key=True, index=True)
+    uid = Column(String, unique=True, index=True, default=lambda: _uuid.uuid4().hex)
     org_id = Column(Integer, nullable=False, index=True)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=True, index=True)  # First seen at branch
     face_photo = Column(String, nullable=False)  # path to cropped face image

@@ -28,12 +28,14 @@ def verify_password(plain: str, hashed: str) -> bool:
     return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
 
 
-def create_token(admin_id: int, org_id: int) -> str:
+def create_token(admin_id: int, org_id: int, branch_id: int = None) -> str:
     payload = {
         "sub": str(admin_id),
         "org": org_id,
         "exp": datetime.utcnow() + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS),
     }
+    if branch_id:
+        payload["branch"] = branch_id
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 

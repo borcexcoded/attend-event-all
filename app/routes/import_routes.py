@@ -8,23 +8,29 @@ import asyncio
 
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
 from sqlalchemy.orm import Session
-import face_recognition
 import numpy as np
 
 from app.database import get_db
 from app.models.user import User
 from app.models.organization import Admin
 from app.auth import get_current_admin
+from app.face_engine import get_engine, encode_embedding
 
 router = APIRouter(tags=["Import"])
 
 
 def _encode_face(image_data: bytes) -> np.ndarray | None:
-    """Get first face encoding from image bytes."""
+    """Get first face encoding from image bytes using InsightFace."""
     try:
-        image = face_recognition.load_image_file(io.BytesIO(image_data))
-        encodings = face_recognition.face_encodings(image)
-        return encodings[0] if encodings else None
+        import cv2
+        nparr = np.frombuffer(image_data, np.uint8)
+        bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if bgr is None:
+            return None
+        rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+        engine = get_engine()
+        results = engine.detect_and_encode_multi_pass(rgb)
+        return results[0]["embedding"] if results else None
     except Exception:
         return None
 
@@ -62,8 +68,8 @@ async def import_members_csv(
             skipped.append(name)
             continue
 
-        # Create a dummy 128-d zero encoding (placeholder – needs photo later)
-        dummy_encoding = np.zeros(128, dtype=np.float64).tobytes()
+        # Create a 512-d zero encoding (placeholder – needs photo later)
+        dummy_encoding = np.zeros(512, dtype=np.float32).tobytes()
 
         user = User(
             org_id=admin.org_id,
@@ -71,6 +77,8 @@ async def import_members_csv(
             face_embedding=dummy_encoding,
             email=email,
             phone=phone,
+            branch_id=admin.branch_id if admin.role != "owner" else None,
+            is_global=False if (admin.role != "owner" and admin.branch_id) else True,
         )
         db.add(user)
         imported.append(name)
@@ -93,7 +101,10 @@ def export_members_csv(admin: Admin = Depends(get_current_admin), db: Session = 
     from fastapi.responses import StreamingResponse
     from datetime import datetime
 
-    users = db.query(User).filter(User.org_id == admin.org_id).all()
+    users_query = db.query(User).filter(User.org_id == admin.org_id)
+    if admin.role != "owner" and admin.branch_id:
+        users_query = users_query.filter(User.branch_id == admin.branch_id)
+    users = users_query.all()
 
     output = io.StringIO()
     writer = csv.writer(output)
@@ -120,6 +131,8 @@ async def update_member_photo(
     user = db.query(User).filter(User.id == member_id, User.org_id == admin.org_id).first()
     if not user:
         raise HTTPException(404, "Member not found")
+    if admin.role != "owner" and admin.branch_id and user.branch_id != admin.branch_id:
+        raise HTTPException(403, "You can only update members in your assigned branch")
 
     image_data = await file.read()
     encoding = await asyncio.to_thread(_encode_face, image_data)
@@ -133,7 +146,7 @@ async def update_member_photo(
     with open(photo_path, "wb") as f:
         f.write(image_data)
 
-    user.face_embedding = encoding.tobytes()
+    user.face_embedding = encode_embedding(encoding)
     user.profile_photo = f"/static/photos/{admin.org_id}/{photo_filename}"
     db.commit()
 

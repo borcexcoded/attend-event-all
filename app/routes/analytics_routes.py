@@ -67,6 +67,7 @@ class BranchAnalytics(BaseModel):
     avg_attendance: float
     growth_rate: float
     top_meeting: Optional[str]
+    visitor_count: Optional[int] = 0
 
 
 class OverallAnalytics(BaseModel):
@@ -79,6 +80,8 @@ class OverallAnalytics(BaseModel):
     late_percentage: float
     most_active_branch: Optional[str]
     most_popular_meeting: Optional[str]
+    attendance_trend: Optional[dict] = None  # {trend_direction, trend_percentage, average_attendance}
+    overall_lateness_rate: Optional[float] = None
 
 
 # --- Endpoints ---
@@ -91,32 +94,48 @@ async def get_analytics_overview(
 ):
     """Get overall organization analytics."""
     org_id = admin.org_id
+    branch_filter = admin.branch_id if admin.role != "owner" and admin.branch_id else None
     cutoff = datetime.utcnow() - timedelta(days=days)
     half_cutoff = datetime.utcnow() - timedelta(days=days // 2)
 
     # Total members
-    total_members = db.query(User).filter(User.org_id == org_id).count()
+    members_q = db.query(User).filter(User.org_id == org_id)
+    if branch_filter:
+        members_q = members_q.filter(User.branch_id == branch_filter)
+    total_members = members_q.count()
 
     # Total visitors
-    total_visitors = db.query(Visitor).filter(Visitor.org_id == org_id).count()
+    visitors_q = db.query(Visitor).filter(Visitor.org_id == org_id)
+    if branch_filter:
+        visitors_q = visitors_q.filter(Visitor.branch_id == branch_filter)
+    total_visitors = visitors_q.count()
 
     # Total attendance records in period
-    total_records = db.query(Attendance).filter(
+    att_q = db.query(Attendance).filter(
         Attendance.org_id == org_id,
         Attendance.time >= cutoff
-    ).count()
+    )
+    if branch_filter:
+        att_q = att_q.filter(Attendance.branch_id == branch_filter)
+    total_records = att_q.count()
 
     # Attendance in first half vs second half for growth
-    first_half = db.query(Attendance).filter(
+    fh_q = db.query(Attendance).filter(
         Attendance.org_id == org_id,
         Attendance.time >= cutoff,
         Attendance.time < half_cutoff
-    ).count()
+    )
+    if branch_filter:
+        fh_q = fh_q.filter(Attendance.branch_id == branch_filter)
+    first_half = fh_q.count()
 
-    second_half = db.query(Attendance).filter(
+    sh_q = db.query(Attendance).filter(
         Attendance.org_id == org_id,
         Attendance.time >= half_cutoff
-    ).count()
+    )
+    if branch_filter:
+        sh_q = sh_q.filter(Attendance.branch_id == branch_filter)
+    second_half = sh_q.count()
 
     growth_rate = 0.0
     if first_half > 0:
@@ -127,39 +146,51 @@ async def get_analytics_overview(
     avg_weekly = round(total_records / weeks, 1)
 
     # Late percentage
-    late_count = db.query(Attendance).filter(
+    late_q = db.query(Attendance).filter(
         Attendance.org_id == org_id,
         Attendance.time >= cutoff,
         Attendance.is_late == True
-    ).count()
+    )
+    if branch_filter:
+        late_q = late_q.filter(Attendance.branch_id == branch_filter)
+    late_count = late_q.count()
     late_pct = round((late_count / total_records * 100) if total_records > 0 else 0, 1)
 
     # Visitor to member conversion (visitors who became members)
-    converted = db.query(Visitor).filter(
+    conv_q = db.query(Visitor).filter(
         Visitor.org_id == org_id,
         Visitor.linked_member_id.isnot(None)
-    ).count()
+    )
+    if branch_filter:
+        conv_q = conv_q.filter(Visitor.branch_id == branch_filter)
+    converted = conv_q.count()
     conversion_rate = round((converted / total_visitors * 100) if total_visitors > 0 else 0, 1)
 
     # Most active branch
-    branch_stats = db.query(
+    branch_q = db.query(
         Branch.name,
         func.count(Attendance.id).label('count')
     ).join(Attendance, Attendance.branch_id == Branch.id).filter(
         Attendance.org_id == org_id,
         Attendance.time >= cutoff
-    ).group_by(Branch.id).order_by(func.count(Attendance.id).desc()).first()
+    )
+    if branch_filter:
+        branch_q = branch_q.filter(Attendance.branch_id == branch_filter)
+    branch_stats = branch_q.group_by(Branch.id).order_by(func.count(Attendance.id).desc()).first()
 
     most_active_branch = branch_stats[0] if branch_stats else None
 
     # Most popular meeting
-    meeting_stats = db.query(
+    meet_q = db.query(
         Meeting.name,
         func.count(Attendance.id).label('count')
     ).join(Attendance, Attendance.meeting_id == Meeting.id).filter(
         Attendance.org_id == org_id,
         Attendance.time >= cutoff
-    ).group_by(Meeting.id).order_by(func.count(Attendance.id).desc()).first()
+    )
+    if branch_filter:
+        meet_q = meet_q.filter(Attendance.branch_id == branch_filter)
+    meeting_stats = meet_q.group_by(Meeting.id).order_by(func.count(Attendance.id).desc()).first()
 
     most_popular_meeting = meeting_stats[0] if meeting_stats else None
 
@@ -173,6 +204,12 @@ async def get_analytics_overview(
         late_percentage=late_pct,
         most_active_branch=most_active_branch,
         most_popular_meeting=most_popular_meeting,
+        attendance_trend={
+            "trend_direction": "up" if growth_rate > 2 else ("down" if growth_rate < -2 else "stable"),
+            "trend_percentage": growth_rate,
+            "average_attendance": avg_weekly,
+        },
+        overall_lateness_rate=round(late_count / total_records, 3) if total_records > 0 else 0,
     )
 
 
@@ -185,6 +222,8 @@ async def get_weekly_trends(
 ):
     """Get week-by-week attendance trends."""
     org_id = admin.org_id
+    if admin.role != "owner" and admin.branch_id:
+        branch_id = admin.branch_id
     trends = []
 
     for w in range(weeks - 1, -1, -1):
@@ -238,6 +277,8 @@ async def get_top_attendees(
 ):
     """Get top members by attendance."""
     org_id = admin.org_id
+    if admin.role != "owner" and admin.branch_id:
+        branch_id = admin.branch_id
     cutoff = datetime.utcnow() - timedelta(days=days)
 
     # Count total meetings in period for attendance rate calculation
@@ -369,7 +410,10 @@ async def get_branch_analytics(
     cutoff = datetime.utcnow() - timedelta(days=days)
     half_cutoff = datetime.utcnow() - timedelta(days=days // 2)
 
-    branches = db.query(Branch).filter(Branch.org_id == org_id, Branch.is_active == True).all()
+    branches_q = db.query(Branch).filter(Branch.org_id == org_id, Branch.is_active == True)
+    if admin.role != "owner" and admin.branch_id:
+        branches_q = branches_q.filter(Branch.id == admin.branch_id)
+    branches = branches_q.all()
 
     results = []
     for branch in branches:
@@ -406,6 +450,11 @@ async def get_branch_analytics(
             Attendance.time >= cutoff
         ).group_by(Meeting.id).order_by(func.count(Attendance.id).desc()).first()
 
+        # Visitors at branch
+        visitor_count = db.query(Visitor).filter(
+            Visitor.branch_id == branch.id
+        ).count()
+
         results.append(BranchAnalytics(
             branch_id=branch.id,
             branch_name=branch.name,
@@ -414,6 +463,7 @@ async def get_branch_analytics(
             avg_attendance=round(attendance / max(days // 7, 1), 1),
             growth_rate=growth,
             top_meeting=top_meeting[0] if top_meeting else None,
+            visitor_count=visitor_count,
         ))
 
     return sorted(results, key=lambda x: x.total_attendance, reverse=True)
@@ -428,6 +478,8 @@ async def get_lateness_report(
 ):
     """Get detailed lateness analytics."""
     org_id = admin.org_id
+    if admin.role != "owner" and admin.branch_id:
+        branch_id = admin.branch_id
     cutoff = datetime.utcnow() - timedelta(days=days)
 
     query = db.query(
@@ -462,4 +514,289 @@ async def get_lateness_report(
             }
             for r in results
         ]
+    }
+
+
+@router.get("/daily-trends")
+async def get_daily_trends(
+    days: int = Query(30, ge=7, le=365),
+    meeting_id: Optional[int] = None,
+    branch_id: Optional[int] = None,
+    admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """Get daily attendance trend data for charts."""
+    org_id = admin.org_id
+    if admin.role != "owner" and admin.branch_id:
+        branch_id = admin.branch_id
+    cutoff = datetime.utcnow() - timedelta(days=days)
+
+    query = db.query(Attendance).filter(
+        Attendance.org_id == org_id,
+        Attendance.time >= cutoff,
+    )
+    if meeting_id:
+        query = query.filter(Attendance.meeting_id == meeting_id)
+    if branch_id:
+        query = query.filter(Attendance.branch_id == branch_id)
+
+    records = query.all()
+
+    # Group by date
+    daily = {}
+    for r in records:
+        if not r.time:
+            continue
+        date_key = r.time.strftime("%Y-%m-%d")
+        if date_key not in daily:
+            daily[date_key] = {"members": set(), "visitors": set(), "total": 0, "late": 0}
+        daily[date_key]["total"] += 1
+        if r.member_type == "visitor":
+            daily[date_key]["visitors"].add(r.visitor_id or r.name)
+        else:
+            daily[date_key]["members"].add(r.user_id or r.name)
+        if r.is_late:
+            daily[date_key]["late"] += 1
+
+    # Build sorted results
+    dates = sorted(daily.keys())
+    return {
+        "period_days": days,
+        "data": [
+            {
+                "date": d,
+                "day_name": datetime.strptime(d, "%Y-%m-%d").strftime("%A"),
+                "total": daily[d]["total"],
+                "members": len(daily[d]["members"]),
+                "visitors": len(daily[d]["visitors"]),
+                "late": daily[d]["late"],
+            }
+            for d in dates
+        ],
+    }
+
+
+@router.get("/member-retention")
+async def get_member_retention(
+    weeks: int = Query(8, ge=4, le=52),
+    admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """Calculate member retention rates over time."""
+    org_id = admin.org_id
+    branch_filter = admin.branch_id if admin.role != "owner" and admin.branch_id else None
+    now = datetime.utcnow()
+
+    retention = []
+    for w in range(weeks - 1, -1, -1):
+        week_end = now - timedelta(weeks=w)
+        week_start = week_end - timedelta(days=7)
+        prev_week_start = week_start - timedelta(days=7)
+
+        # Members who attended this week
+        this_week_q = db.query(Attendance.user_id).filter(
+                Attendance.org_id == org_id,
+                Attendance.time >= week_start,
+                Attendance.time < week_end,
+                Attendance.user_id.isnot(None),
+            )
+        if branch_filter:
+            this_week_q = this_week_q.filter(Attendance.branch_id == branch_filter)
+        this_week = set(r.user_id for r in this_week_q.all())
+
+        # Members who attended previous week
+        prev_week_q = db.query(Attendance.user_id).filter(
+                Attendance.org_id == org_id,
+                Attendance.time >= prev_week_start,
+                Attendance.time < week_start,
+                Attendance.user_id.isnot(None),
+            )
+        if branch_filter:
+            prev_week_q = prev_week_q.filter(Attendance.branch_id == branch_filter)
+        prev_week = set(r.user_id for r in prev_week_q.all())
+
+        retained = len(this_week & prev_week)
+        rate = round((retained / len(prev_week)) * 100, 1) if prev_week else 0
+
+        retention.append({
+            "week_start": week_start.strftime("%Y-%m-%d"),
+            "week_end": week_end.strftime("%Y-%m-%d"),
+            "active_members": len(this_week),
+            "retained_from_prev": retained,
+            "retention_rate": rate,
+            "new_this_week": len(this_week - prev_week),
+            "churned": len(prev_week - this_week),
+        })
+
+    return {"weeks": weeks, "data": retention}
+
+
+@router.get("/meeting-comparison")
+async def get_meeting_comparison(
+    days: int = Query(30, ge=7, le=365),
+    admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """Compare attendance across all meetings."""
+    org_id = admin.org_id
+    branch_filter = admin.branch_id if admin.role != "owner" and admin.branch_id else None
+    cutoff = datetime.utcnow() - timedelta(days=days)
+
+    meetings_q = db.query(Meeting).filter(
+        Meeting.org_id == org_id, Meeting.is_active == True
+    )
+    if branch_filter:
+        meetings_q = meetings_q.filter((Meeting.branch_id == branch_filter) | (Meeting.branch_id == None))
+    meetings = meetings_q.all()
+
+    comparisons = []
+    for m in meetings:
+        records = db.query(Attendance).filter(
+            Attendance.meeting_id == m.id,
+            Attendance.time >= cutoff,
+        )
+        if branch_filter:
+            records = records.filter(Attendance.branch_id == branch_filter)
+        records = records.all()
+
+        if not records:
+            comparisons.append({
+                "id": m.id, "name": m.name, "color": m.color,
+                "total": 0, "unique_members": 0, "unique_visitors": 0,
+                "sessions": 0, "avg_per_session": 0,
+            })
+            continue
+
+        dates = set()
+        members = set()
+        visitors = set()
+        for r in records:
+            if r.time:
+                dates.add(r.time.strftime("%Y-%m-%d"))
+            if r.member_type == "visitor":
+                visitors.add(r.visitor_id or r.name)
+            else:
+                members.add(r.user_id or r.name)
+
+        sessions = len(dates)
+        comparisons.append({
+            "id": m.id, "name": m.name, "color": m.color,
+            "total": len(records),
+            "unique_members": len(members),
+            "unique_visitors": len(visitors),
+            "sessions": sessions,
+            "avg_per_session": round(len(records) / sessions, 1) if sessions else 0,
+        })
+
+    return {"period_days": days, "meetings": sorted(comparisons, key=lambda x: x["total"], reverse=True)}
+
+
+@router.get("/growth-metrics")
+async def get_growth_metrics(
+    admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """Get monthly growth metrics for the organization."""
+    org_id = admin.org_id
+    branch_filter = admin.branch_id if admin.role != "owner" and admin.branch_id else None
+    now = datetime.utcnow()
+
+    months = []
+    for i in range(11, -1, -1):
+        month_start = (now - timedelta(days=i * 30)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        if month_start.month == 12:
+            month_end = month_start.replace(year=month_start.year + 1, month=1)
+        else:
+            month_end = month_start.replace(month=month_start.month + 1)
+
+        new_members_q = db.query(User).filter(
+            User.org_id == org_id,
+            User.created_at >= month_start,
+            User.created_at < month_end,
+        )
+        if branch_filter:
+            new_members_q = new_members_q.filter(User.branch_id == branch_filter)
+        new_members = new_members_q.count()
+
+        attendance_q = db.query(Attendance).filter(
+            Attendance.org_id == org_id,
+            Attendance.time >= month_start,
+            Attendance.time < month_end,
+        )
+        if branch_filter:
+            attendance_q = attendance_q.filter(Attendance.branch_id == branch_filter)
+        attendance = attendance_q.count()
+
+        visitors_q = db.query(Visitor).filter(
+            Visitor.org_id == org_id,
+            Visitor.first_seen >= month_start,
+            Visitor.first_seen < month_end,
+        )
+        if branch_filter:
+            visitors_q = visitors_q.filter(Visitor.branch_id == branch_filter)
+        visitors = visitors_q.count()
+
+        months.append({
+            "month": month_start.strftime("%Y-%m"),
+            "month_name": month_start.strftime("%B %Y"),
+            "new_members": new_members,
+            "total_attendance": attendance,
+            "new_visitors": visitors,
+        })
+
+    return {"months": months}
+
+
+@router.get("/dashboard-summary")
+async def get_dashboard_summary(
+    admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """Get org-wide dashboard summary with per-branch breakdown (owner view)."""
+    org_id = admin.org_id
+    today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    tomorrow = today + timedelta(days=1)
+    cutoff_30 = datetime.utcnow() - timedelta(days=30)
+
+    branches = db.query(Branch).filter(
+        Branch.org_id == org_id, Branch.is_active == True
+    ).order_by(Branch.is_headquarters.desc(), Branch.name).all()
+
+    branch_data = []
+    total_members_org = 0
+    total_today_org = 0
+
+    for b in branches:
+        members = db.query(func.count(User.id)).filter(User.branch_id == b.id).scalar() or 0
+        today_att = (
+            db.query(func.count(func.distinct(Attendance.name)))
+            .filter(Attendance.branch_id == b.id, Attendance.time >= today, Attendance.time < tomorrow)
+            .scalar() or 0
+        )
+        att_30d = (
+            db.query(func.count(Attendance.id))
+            .filter(Attendance.branch_id == b.id, Attendance.time >= cutoff_30)
+            .scalar() or 0
+        )
+        meetings = db.query(func.count(Meeting.id)).filter(Meeting.branch_id == b.id, Meeting.is_active == True).scalar() or 0
+
+        total_members_org += members
+        total_today_org += today_att
+
+        branch_data.append({
+            "id": b.id,
+            "name": b.name,
+            "code": b.code,
+            "is_headquarters": b.is_headquarters,
+            "members": members,
+            "today_attendance": today_att,
+            "attendance_30d": att_30d,
+            "meetings": meetings,
+        })
+
+    return {
+        "total_members": total_members_org,
+        "total_today": total_today_org,
+        "total_branches": len(branches),
+        "branches": branch_data,
     }

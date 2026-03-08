@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ttend — Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <style>
       * {
         margin: 0;
@@ -634,8 +635,9 @@
       .camera-view img {
         width: 100%;
         height: 100%;
-        object-fit: cover;
+        object-fit: contain;
         display: block;
+        background: #000;
       }
       .camera-placeholder {
         position: absolute;
@@ -955,6 +957,520 @@
         color: var(--fg3);
         font-size: 13px;
       }
+      /* Shimmer skeleton animation */
+      @keyframes shimmer {
+        0% {
+          background-position: -400px 0;
+        }
+        100% {
+          background-position: 400px 0;
+        }
+      }
+      .shimmer {
+        background: linear-gradient(
+          90deg,
+          var(--bg2) 25%,
+          var(--border-light) 50%,
+          var(--bg2) 75%
+        );
+        background-size: 800px 100%;
+        animation: shimmer 1.5s infinite;
+        border-radius: 8px;
+      }
+      .shimmer-line {
+        height: 14px;
+        margin-bottom: 10px;
+      }
+      .shimmer-box {
+        height: 120px;
+        margin-bottom: 12px;
+      }
+      .shimmer-circle {
+        border-radius: 50%;
+      }
+      /* Analytics tabs */
+      .an-tabs {
+        display: flex;
+        gap: 6px;
+        border-bottom: 1px solid var(--border-light);
+        padding-bottom: 8px;
+        margin-bottom: 16px;
+      }
+      .an-tab {
+        padding: 8px 16px;
+        font-size: 13px;
+        font-weight: 600;
+        border-radius: 10px;
+        cursor: pointer;
+        border: none;
+        background: none;
+        color: var(--fg3);
+        transition: all 0.15s;
+      }
+      .an-tab:hover {
+        background: var(--bg2);
+        color: var(--fg);
+      }
+      .an-tab.active {
+        background: var(--blue);
+        color: #fff;
+      }
+      .an-tab-content {
+        display: none;
+      }
+      .an-tab-content.active {
+        display: block;
+      }
+      /* Analytics table */
+      .an-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .an-table th {
+        text-align: left;
+        padding: 10px 14px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--fg3);
+        border-bottom: 1px solid var(--border-light);
+        background: var(--bg2);
+      }
+      .an-table td {
+        padding: 10px 14px;
+        font-size: 13px;
+        border-bottom: 1px solid var(--border-light);
+      }
+      .an-table tr:hover td {
+        background: var(--bg2);
+      }
+      .an-table tr:last-child td {
+        border-bottom: none;
+      }
+      .rate-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 99px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .rate-badge.green {
+        background: var(--green-light);
+        color: var(--green);
+      }
+      .rate-badge.amber {
+        background: rgba(255, 159, 10, 0.12);
+        color: #e08600;
+      }
+      .rate-badge.red {
+        background: rgba(255, 59, 48, 0.1);
+        color: var(--red);
+      }
+      .medal {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .medal.gold {
+        background: #fef3c7;
+        color: #b45309;
+      }
+      .medal.silver {
+        background: #f3f4f6;
+        color: #4b5563;
+      }
+      .medal.bronze {
+        background: #ffedd5;
+        color: #c2410c;
+      }
+      .medal.default {
+        background: var(--bg2);
+        color: var(--fg3);
+      }
+      .progress-bar {
+        height: 6px;
+        border-radius: 99px;
+        overflow: hidden;
+        background: var(--bg2);
+        flex: 1;
+        max-width: 100px;
+      }
+      .progress-bar-fill {
+        height: 100%;
+        border-radius: 99px;
+        transition: width 0.5s;
+        background: var(--green);
+      }
+
+      /* MEETING DETAIL MODAL */
+      .mtg-modal-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        background: rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(6px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .mtg-modal {
+        background: var(--bg);
+        border-radius: 20px;
+        width: 94%;
+        max-width: 960px;
+        max-height: 92vh;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+        display: flex;
+        flex-direction: column;
+      }
+      .mtg-modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 28px 16px;
+        border-bottom: 1px solid var(--border-light);
+        flex-shrink: 0;
+      }
+      .mtg-modal-header h2 {
+        font-size: 20px;
+        font-weight: 700;
+      }
+      .mtg-modal-header .actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .mtg-modal-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 24px 28px;
+      }
+      .mtg-tabs {
+        display: flex;
+        gap: 4px;
+        background: var(--bg2);
+        border-radius: 10px;
+        padding: 4px;
+        margin-bottom: 20px;
+      }
+      .mtg-tab {
+        flex: 1;
+        padding: 8px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        text-align: center;
+        border-radius: 8px;
+        border: none;
+        background: transparent;
+        color: var(--fg3);
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .mtg-tab.active {
+        background: var(--bg);
+        color: var(--fg);
+        box-shadow: var(--shadow-sm);
+      }
+      .mtg-period-pills {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 20px;
+      }
+      .mtg-pill {
+        padding: 6px 14px;
+        font-size: 12px;
+        font-weight: 600;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: var(--bg);
+        color: var(--fg2);
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .mtg-pill.active {
+        background: var(--fg);
+        color: #fff;
+        border-color: var(--fg);
+      }
+      .mtg-stats-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+      .mtg-stat-card {
+        text-align: center;
+        padding: 16px 8px;
+        background: var(--bg2);
+        border-radius: 14px;
+      }
+      .mtg-stat-card .val {
+        font-size: 24px;
+        font-weight: 800;
+        line-height: 1.1;
+      }
+      .mtg-stat-card .lbl {
+        font-size: 11px;
+        color: var(--fg3);
+        margin-top: 4px;
+      }
+      .mtg-chart-wrap {
+        background: var(--bg2);
+        border-radius: 14px;
+        padding: 20px;
+        margin-bottom: 24px;
+      }
+      .mtg-chart-wrap h4 {
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 12px;
+      }
+      .chart-controls {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+      }
+      .chart-toggle {
+        padding: 4px 12px;
+        font-size: 11px;
+        font-weight: 600;
+        border-radius: 999px;
+        border: 1.5px solid var(--border);
+        background: var(--bg);
+        color: var(--fg3);
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .chart-toggle .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+      .chart-toggle.active {
+        border-color: currentColor;
+        background: var(--bg2);
+        color: var(--fg);
+      }
+      .chart-type-btn {
+        padding: 4px 10px;
+        font-size: 11px;
+        font-weight: 600;
+        border-radius: 8px;
+        border: 1.5px solid var(--border);
+        background: var(--bg);
+        color: var(--fg3);
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .chart-type-btn.active {
+        background: var(--fg);
+        color: #fff;
+        border-color: var(--fg);
+      }
+      .mtg-date-range {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-left: auto;
+      }
+      .mtg-date-range input[type="date"] {
+        padding: 5px 10px;
+        font-size: 12px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: inherit;
+      }
+      .mtg-date-range label {
+        font-size: 11px;
+        color: var(--fg3);
+        font-weight: 500;
+      }
+      .mtg-session-block {
+        margin-bottom: 16px;
+        border: 1px solid var(--border-light);
+        border-radius: 14px;
+        overflow: hidden;
+      }
+      .mtg-session-header {
+        padding: 12px 18px;
+        background: var(--bg2);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+      }
+      .mtg-session-header:hover {
+        background: var(--border-light);
+      }
+      .mtg-session-header .date-label {
+        font-weight: 600;
+        font-size: 13px;
+      }
+      .mtg-session-header .meta {
+        display: flex;
+        gap: 12px;
+        font-size: 12px;
+        color: var(--fg3);
+        align-items: center;
+      }
+      .mtg-session-header .chevron {
+        width: 16px;
+        height: 16px;
+        color: var(--fg3);
+        transition: transform 0.2s;
+      }
+      .mtg-session-header.expanded .chevron {
+        transform: rotate(180deg);
+      }
+      .mtg-session-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      .mtg-session-table th {
+        text-align: left;
+        padding: 10px 18px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--fg3);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        border-bottom: 1px solid var(--border-light);
+      }
+      .mtg-session-table td {
+        padding: 10px 18px;
+        border-bottom: 1px solid var(--border-light);
+      }
+      .mtg-session-table tr:last-child td {
+        border-bottom: none;
+      }
+      .mtg-session-table .name-cell {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .mtg-session-table .name-cell .avatar {
+        width: 28px;
+        height: 28px;
+        font-size: 11px;
+        flex-shrink: 0;
+      }
+      .mtg-member-stats-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      .mtg-member-stats-table th {
+        text-align: left;
+        padding: 10px 16px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--fg3);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        border-bottom: 1px solid var(--border-light);
+        background: var(--bg2);
+        position: sticky;
+        top: 0;
+      }
+      .mtg-member-stats-table td {
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--border-light);
+      }
+      .mtg-member-stats-table tr:hover {
+        background: var(--bg2);
+      }
+      .mtg-rate-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .mtg-rate-track {
+        flex: 1;
+        height: 6px;
+        background: var(--border-light);
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      .mtg-rate-fill {
+        height: 100%;
+        border-radius: 3px;
+        transition: width 0.5s ease;
+      }
+      .mtg-rate-pct {
+        font-size: 12px;
+        font-weight: 600;
+        width: 42px;
+        text-align: right;
+      }
+      .type-badge {
+        font-size: 10px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 999px;
+        text-transform: capitalize;
+      }
+      .type-badge.member {
+        background: var(--green-light);
+        color: var(--green-dark);
+      }
+      .type-badge.visitor {
+        background: var(--orange-light);
+        color: var(--orange);
+      }
+      .type-badge.new_member {
+        background: var(--blue-light);
+        color: var(--blue);
+      }
+      .btn-download {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        font-size: 12px;
+        font-weight: 600;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: var(--bg);
+        color: var(--fg);
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .btn-download:hover {
+        background: var(--bg2);
+      }
+      @media (max-width: 600px) {
+        .mtg-stats-row {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .mtg-modal {
+          width: 100%;
+          max-width: none;
+          border-radius: 16px 16px 0 0;
+          max-height: 95vh;
+        }
+        .mtg-modal-body {
+          padding: 16px;
+        }
+        .mtg-session-table td,
+        .mtg-session-table th {
+          padding: 8px 12px;
+        }
+      }
 
       /* VIDEO AREA */
       .video-indicator {
@@ -1102,6 +1618,17 @@
             @ttend
           </h1>
           <p id="orgNameSidebar">Organization</p>
+          <p
+            id="branchNameSidebar"
+            style="
+              font-size: 0.72rem;
+              color: #94a3b8;
+              margin: 2px 0 0 0;
+              cursor: pointer;
+            "
+            onclick="showBranchSwitcher()"
+            title="Click to switch branch"
+          ></p>
         </div>
         <nav class="sidebar-nav">
           <button class="nav-item active" data-page="dashboard">
@@ -1190,7 +1717,52 @@
             </svg>
             Meetings
           </button>
+          <button class="nav-item" data-page="analytics">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+            >
+              <line x1="18" y1="20" x2="18" y2="10" />
+              <line x1="12" y1="20" x2="12" y2="4" />
+              <line x1="6" y1="20" x2="6" y2="14" />
+            </svg>
+            Analytics
+          </button>
+          <button class="nav-item" data-page="branches">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+            >
+              <circle cx="12" cy="5" r="3" />
+              <line x1="12" y1="8" x2="12" y2="14" />
+              <circle cx="6" cy="19" r="3" />
+              <circle cx="18" cy="19" r="3" />
+              <line x1="12" y1="14" x2="6" y2="16" />
+              <line x1="12" y1="14" x2="18" y2="16" />
+            </svg>
+            Branches
+          </button>
           <div class="nav-sep"></div>
+          <a
+            class="nav-item"
+            id="adminConsoleLink"
+            href="/admin"
+            style="display: none; color: var(--fg2)"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+            >
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+            Admin Console
+          </a>
           <button class="nav-item" data-page="settings">
             <svg
               viewBox="0 0 24 24"
@@ -1333,7 +1905,10 @@
             <div class="two-col">
               <div class="card">
                 <div class="card-title">Today's Members</div>
-                <div id="todayMembers">
+                <div
+                  id="todayMembers"
+                  style="max-height: 400px; overflow-y: auto"
+                >
                   <div class="loading">Loading...</div>
                 </div>
               </div>
@@ -1354,6 +1929,41 @@
                   >
                 </div>
                 <div class="attendees-grid" id="topAttendees"></div>
+              </div>
+            </div>
+
+            <!-- Branch Overview (Owner Only) -->
+            <div
+              id="branchOverviewSection"
+              class="hidden"
+              style="margin-bottom: 20px"
+            >
+              <div class="card">
+                <div
+                  class="card-title"
+                  style="
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                  "
+                >
+                  Branch Overview
+                  <span
+                    style="font-weight: 400; font-size: 12px; color: var(--fg3)"
+                    id="branchOverviewTotal"
+                  ></span>
+                </div>
+                <div
+                  id="branchOverviewGrid"
+                  style="
+                    display: grid;
+                    grid-template-columns: repeat(
+                      auto-fill,
+                      minmax(220px, 1fr)
+                    );
+                    gap: 14px;
+                  "
+                ></div>
               </div>
             </div>
 
@@ -1442,7 +2052,7 @@
                     <input
                       type="file"
                       id="qrPhotoInput"
-                      accept="image/*"
+                      accept="image/*,.heic,.heif,.webp,.bmp,.tiff,.tif,.raw,.cr2,.nef,.svg,.avif,.dng,.arw"
                       style="display: none"
                       onchange="handleQRPhoto(this)"
                     />
@@ -1621,13 +2231,13 @@
                   <input
                     type="file"
                     id="photoInput"
-                    accept="image/*"
+                    accept="image/*,.heic,.heif,.webp,.bmp,.tiff,.tif,.raw,.cr2,.nef,.svg,.avif,.dng,.arw,.orf,.rw2,.pef,.sr2"
                     style="display: none"
                   />
                   <input
                     type="file"
                     id="videoInput"
-                    accept="video/*"
+                    accept="video/*,.mov,.mp4,.avi,.mkv,.wmv,.flv,.webm,.m4v,.3gp,.mpeg,.mpg,.ts,.mts,.m2ts,.vob,.ogv,.divx,.f4v,.asf,.rm,.rmvb"
                     style="display: none"
                   />
                 </div>
@@ -1724,6 +2334,10 @@
                         placeholder="+1 234 567"
                       />
                     </div>
+                    <div class="form-group">
+                      <label class="form-label">Branch</label>
+                      <select class="form-select" id="regBranchSelect"></select>
+                    </div>
                   </div>
                   <div>
                     <div class="form-group">
@@ -1747,7 +2361,7 @@
                       <input
                         type="file"
                         id="regPhotoInput"
-                        accept="image/*"
+                        accept="image/*,.heic,.heif,.webp,.bmp,.tiff,.tif,.raw,.cr2,.nef,.svg,.avif,.dng,.arw"
                         style="display: none"
                       />
                       <div
@@ -1760,6 +2374,15 @@
                     </div>
                   </div>
                 </div>
+                <div
+                  id="regCustomFields"
+                  style="
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 12px;
+                    margin-bottom: 16px;
+                  "
+                ></div>
                 <div id="regMessage" class="hidden"></div>
                 <button
                   type="submit"
@@ -1906,10 +2529,180 @@
                 <p>View and manage attendance history.</p>
               </div>
               <div class="hdr-actions">
+                <button
+                  class="btn btn-green"
+                  id="btnManualAttendance"
+                  onclick="toggleManualAttendance()"
+                >
+                  + Add Attendance
+                </button>
                 <button class="btn btn-outline" id="btnExportAttendance">
                   Export CSV
                 </button>
               </div>
+            </div>
+            <!-- Manual attendance form -->
+            <div
+              id="manualAttCard"
+              class="card hidden"
+              style="margin-bottom: 20px; padding: 20px"
+            >
+              <div class="card-title">Add Attendance Manually</div>
+              <div
+                style="
+                  display: flex;
+                  flex-wrap: wrap;
+                  gap: 12px;
+                  align-items: end;
+                  margin-top: 12px;
+                "
+              >
+                <div style="flex: 1; min-width: 200px">
+                  <label
+                    style="
+                      font-size: 11px;
+                      font-weight: 600;
+                      color: var(--fg3);
+                      display: block;
+                      margin-bottom: 4px;
+                    "
+                    >Select Members</label
+                  >
+                  <div id="manualMemberSearch" style="position: relative">
+                    <input
+                      type="text"
+                      id="manualMemberInput"
+                      class="form-input"
+                      placeholder="Search members..."
+                      oninput="filterManualMembers()"
+                      style="height: 38px"
+                    />
+                    <div
+                      id="manualMemberDropdown"
+                      style="
+                        display: none;
+                        position: absolute;
+                        left: 0;
+                        right: 0;
+                        top: 100%;
+                        background: var(--bg);
+                        border: 1px solid var(--border);
+                        border-radius: 8px;
+                        max-height: 200px;
+                        overflow-y: auto;
+                        z-index: 10;
+                        box-shadow: var(--shadow-md);
+                      "
+                    ></div>
+                  </div>
+                  <div
+                    id="manualSelectedMembers"
+                    style="
+                      display: flex;
+                      flex-wrap: wrap;
+                      gap: 6px;
+                      margin-top: 8px;
+                    "
+                  ></div>
+                </div>
+                <div style="min-width: 160px">
+                  <label
+                    style="
+                      font-size: 11px;
+                      font-weight: 600;
+                      color: var(--fg3);
+                      display: block;
+                      margin-bottom: 4px;
+                    "
+                    >Meeting</label
+                  >
+                  <select
+                    id="manualMeetingSelect"
+                    class="form-input"
+                    style="height: 38px"
+                  >
+                    <option value="">General</option>
+                  </select>
+                </div>
+                <div style="min-width: 140px">
+                  <label
+                    style="
+                      font-size: 11px;
+                      font-weight: 600;
+                      color: var(--fg3);
+                      display: block;
+                      margin-bottom: 4px;
+                    "
+                    >Date</label
+                  >
+                  <input
+                    type="date"
+                    id="manualDate"
+                    class="form-input"
+                    style="height: 38px"
+                  />
+                </div>
+                <button
+                  class="btn btn-green"
+                  onclick="submitManualAttendance()"
+                  style="height: 38px; white-space: nowrap"
+                >
+                  Mark Attendance
+                </button>
+              </div>
+              <div
+                style="
+                  margin-top: 12px;
+                  padding-top: 12px;
+                  border-top: 1px solid var(--border-light);
+                "
+              >
+                <div
+                  style="
+                    font-size: 12px;
+                    font-weight: 600;
+                    color: var(--fg3);
+                    margin-bottom: 8px;
+                  "
+                >
+                  Or add by name (for non-registered)
+                </div>
+                <div style="display: flex; gap: 8px; align-items: end">
+                  <select
+                    id="manualTypeSelect"
+                    class="form-input"
+                    style="height: 38px; width: 140px"
+                  >
+                    <option value="visitor" selected>Visitor</option>
+                    <option value="member">Member</option>
+                    <option value="new_member">New Member</option>
+                  </select>
+                  <input
+                    type="text"
+                    id="manualNameInput"
+                    class="form-input"
+                    placeholder="Enter full name"
+                    style="height: 38px; flex: 1; max-width: 300px"
+                  />
+                  <button
+                    class="btn btn-outline"
+                    onclick="submitManualByName()"
+                    style="height: 38px"
+                  >
+                    Add by Name
+                  </button>
+                </div>
+              </div>
+              <div
+                id="manualResult"
+                style="
+                  display: none;
+                  margin-top: 10px;
+                  padding: 8px 12px;
+                  border-radius: 8px;
+                  font-size: 12px;
+                "
+              ></div>
             </div>
             <div id="recordsError" class="hidden"></div>
             <div class="card" style="margin-bottom: 20px; padding: 16px 20px">
@@ -2128,27 +2921,399 @@
 
             <!-- Meeting detail modal -->
             <div
-              class="modal-overlay"
+              class="mtg-modal-overlay"
               id="meetingDetailModal"
               style="display: none"
             >
-              <div
-                class="modal"
-                style="max-width: 700px; max-height: 85vh; overflow-y: auto"
-              >
-                <button class="modal-close" onclick="closeMeetingDetail()">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                </button>
-                <div id="meetingDetailContent">Loading...</div>
+              <div class="mtg-modal">
+                <div class="mtg-modal-header">
+                  <h2 id="mtgDetailTitle">Meeting</h2>
+                  <div class="actions">
+                    <button
+                      class="btn btn-green btn-sm"
+                      id="mtgAddMembersBtn"
+                      onclick="openMtgAddMembers()"
+                      style="font-size: 12px; padding: 6px 14px"
+                    >
+                      + Add Members
+                    </button>
+                    <button
+                      class="btn-download"
+                      id="mtgExportBtn"
+                      onclick="exportMeetingCSV()"
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                      Export CSV
+                    </button>
+                    <button
+                      style="
+                        background: none;
+                        border: none;
+                        cursor: pointer;
+                        color: var(--fg3);
+                        padding: 6px;
+                      "
+                      onclick="closeMeetingDetail()"
+                    >
+                      <svg
+                        width="22"
+                        height="22"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <div class="mtg-modal-body" id="meetingDetailContent">
+                  <div class="loading">Loading...</div>
+                </div>
               </div>
+            </div>
+          </div>
+
+          <!-- ===== ANALYTICS ===== -->
+          <div class="page" id="page-analytics">
+            <div class="page-hdr">
+              <h2>Analytics</h2>
+              <p>In-depth visual analytics for data-driven decisions.</p>
+            </div>
+            <div class="stats-grid" id="analyticsStatsGrid">
+              <div class="stat-card">
+                <div class="stat-top">
+                  <span class="stat-label">Total Members</span>
+                </div>
+                <div class="stat-value" id="anMembers">--</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-top">
+                  <span class="stat-label">Total Visitors</span>
+                </div>
+                <div
+                  class="stat-value"
+                  id="anVisitors"
+                  style="color: var(--orange)"
+                >
+                  --
+                </div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-top">
+                  <span class="stat-label">Attendance (30d)</span>
+                </div>
+                <div class="stat-value" id="anAttendance">--</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-top">
+                  <span class="stat-label">Growth</span>
+                </div>
+                <div class="stat-value" id="anGrowth">--</div>
+              </div>
+            </div>
+            <!-- Attendance Trend Indicator -->
+            <div
+              class="card hidden"
+              id="anTrendCard"
+              style="
+                margin-bottom: 16px;
+                padding: 16px 20px;
+                display: flex;
+                align-items: center;
+                gap: 16px;
+              "
+            >
+              <div
+                id="anTrendBadge"
+                style="
+                  padding: 6px 14px;
+                  border-radius: 10px;
+                  font-size: 18px;
+                  font-weight: 700;
+                "
+              ></div>
+              <div>
+                <div
+                  id="anTrendText"
+                  style="font-size: 14px; font-weight: 500"
+                ></div>
+                <div
+                  id="anTrendAvg"
+                  style="font-size: 12px; color: var(--fg3)"
+                ></div>
+              </div>
+            </div>
+            <!-- Period selector -->
+            <div
+              class="card"
+              style="
+                margin-bottom: 16px;
+                padding: 14px 20px;
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                flex-wrap: wrap;
+              "
+            >
+              <div style="font-size: 13px; font-weight: 600; color: var(--fg2)">
+                Period:
+              </div>
+              <select
+                id="anPeriod"
+                class="form-input"
+                style="width: auto; min-width: 120px"
+                onchange="loadAnalytics()"
+              >
+                <option value="7">Last 7 days</option>
+                <option value="30" selected>Last 30 days</option>
+                <option value="90">Last 90 days</option>
+                <option value="365">Last year</option>
+              </select>
+              <select
+                id="anBranch"
+                class="form-input"
+                style="width: auto; min-width: 120px"
+                onchange="loadAnalytics()"
+              >
+                <option value="">All branches</option>
+              </select>
+            </div>
+            <!-- Charts row -->
+            <div class="two-col">
+              <div class="card">
+                <div class="card-title">Daily Attendance Trend</div>
+                <div style="height: 280px; position: relative">
+                  <canvas id="anDailyChart"></canvas>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-title">Meeting Comparison</div>
+                <div style="height: 280px; position: relative">
+                  <canvas id="anMeetingChart"></canvas>
+                </div>
+              </div>
+            </div>
+            <div class="two-col" style="margin-top: 16px">
+              <div class="card">
+                <div class="card-title">Member Retention</div>
+                <div style="height: 280px; position: relative">
+                  <canvas id="anRetentionChart"></canvas>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-title">Growth Over Time</div>
+                <div style="height: 280px; position: relative">
+                  <canvas id="anGrowthChart"></canvas>
+                </div>
+              </div>
+            </div>
+            <div class="two-col" style="margin-top: 16px">
+              <div class="card">
+                <div class="card-title">Top Attendees</div>
+                <div
+                  id="anTopAttendees"
+                  style="max-height: 340px; overflow-y: auto"
+                >
+                  <div class="loading">Loading...</div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-title">Visitor Insights</div>
+                <div style="height: 280px; position: relative">
+                  <canvas id="anVisitorChart"></canvas>
+                </div>
+              </div>
+            </div>
+            <div class="card" style="margin-top: 16px">
+              <div class="card-title">Weekly Trends</div>
+              <div style="height: 300px; position: relative">
+                <canvas id="anWeeklyChart"></canvas>
+              </div>
+            </div>
+
+            <!-- Analytics Tabs: Lateness Report & Branch Comparison -->
+            <div class="an-tabs" style="margin-top: 20px">
+              <button class="an-tab active" onclick="switchAnTab('lateness')">
+                Lateness Report
+              </button>
+              <button class="an-tab" onclick="switchAnTab('branchcmp')">
+                Branch Comparison
+              </button>
+            </div>
+
+            <!-- Lateness Report -->
+            <div class="an-tab-content active" id="anTab-lateness">
+              <div class="card" style="overflow: hidden">
+                <div
+                  style="
+                    padding: 16px 20px;
+                    border-bottom: 1px solid var(--border-light);
+                  "
+                >
+                  <div style="font-size: 15px; font-weight: 600">
+                    Lateness Report
+                  </div>
+                  <div
+                    style="font-size: 12px; color: var(--fg3); margin-top: 2px"
+                  >
+                    Members who have been late in the selected period
+                  </div>
+                </div>
+                <div id="anLatenessBody" style="overflow-x: auto">
+                  <div class="loading">Loading...</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Branch Comparison -->
+            <div class="an-tab-content" id="anTab-branchcmp">
+              <div class="card" style="overflow: hidden">
+                <div
+                  style="
+                    padding: 16px 20px;
+                    border-bottom: 1px solid var(--border-light);
+                  "
+                >
+                  <div style="font-size: 15px; font-weight: 600">
+                    Branch Comparison
+                  </div>
+                  <div
+                    style="font-size: 12px; color: var(--fg3); margin-top: 2px"
+                  >
+                    Attendance across all branches
+                  </div>
+                </div>
+                <div id="anBranchCmpBody" style="padding: 16px">
+                  <div class="loading">Loading...</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== BRANCHES ===== -->
+          <div class="page" id="page-branches">
+            <div class="hdr-row">
+              <div>
+                <h2>Branches</h2>
+                <p>
+                  Manage branches under your organization. Centralized database
+                  — members in one branch are members of all.
+                </p>
+              </div>
+              <div class="hdr-actions">
+                <button
+                  class="btn btn-green"
+                  id="btnNewBranch"
+                  onclick="toggleBranchForm()"
+                >
+                  + New Branch
+                </button>
+              </div>
+            </div>
+            <div
+              id="branchFormCard"
+              class="card hidden"
+              style="margin-bottom: 20px; padding: 24px"
+            >
+              <h3 style="margin-bottom: 16px">Create Branch</h3>
+              <form id="branchForm" onsubmit="submitBranch(event)">
+                <div
+                  style="
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 16px;
+                  "
+                >
+                  <div class="field">
+                    <label>Branch Name *</label
+                    ><input
+                      type="text"
+                      id="brName"
+                      class="form-input"
+                      placeholder="e.g. North Campus"
+                      required
+                    />
+                  </div>
+                  <div class="field">
+                    <label>Branch Code *</label
+                    ><input
+                      type="text"
+                      id="brCode"
+                      class="form-input"
+                      placeholder="e.g. NORTH"
+                      required
+                      maxlength="10"
+                    />
+                  </div>
+                  <div class="field">
+                    <label>City</label
+                    ><input
+                      type="text"
+                      id="brCity"
+                      class="form-input"
+                      placeholder="Lagos"
+                    />
+                  </div>
+                  <div class="field">
+                    <label>Country</label
+                    ><input
+                      type="text"
+                      id="brCountry"
+                      class="form-input"
+                      placeholder="Nigeria"
+                    />
+                  </div>
+                  <div class="field" style="grid-column: 1/-1">
+                    <label>Address</label
+                    ><input
+                      type="text"
+                      id="brAddress"
+                      class="form-input"
+                      placeholder="123 Church Street"
+                    />
+                  </div>
+                  <div class="field">
+                    <label
+                      style="
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                        cursor: pointer;
+                      "
+                      ><input type="checkbox" id="brHQ" /> Headquarters</label
+                    >
+                  </div>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 20px">
+                  <button type="submit" class="btn btn-green">
+                    Create Branch
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-outline"
+                    onclick="toggleBranchForm()"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+            <div id="branchesList">
+              <div class="loading">Loading branches...</div>
             </div>
           </div>
 
@@ -2270,6 +3435,12 @@
                         <option value="viewer">Viewer</option>
                       </select>
                     </div>
+                    <div class="form-group" style="margin: 0; min-width: 130px">
+                      <label class="form-label">Branch</label
+                      ><select class="form-select" id="invBranch">
+                        <option value="">Same as mine</option>
+                      </select>
+                    </div>
                     <button type="submit" class="btn btn-green btn-sm">
                       Invite
                     </button>
@@ -2279,6 +3450,22 @@
                     class="hidden"
                     style="margin-top: 8px"
                   ></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <h3>SMS Notifications</h3>
+              <p class="desc">
+                Members with phone numbers receive an SMS when their attendance
+                is recorded.
+              </p>
+              <div class="card">
+                <div
+                  id="smsStatus"
+                  style="display: flex; align-items: center; gap: 10px"
+                >
+                  <div class="loading" style="width: auto">Checking...</div>
                 </div>
               </div>
             </div>
@@ -2296,6 +3483,102 @@
                 <button class="btn btn-outline" onclick="exportAttendance()">
                   Export Attendance CSV
                 </button>
+              </div>
+            </div>
+
+            <div class="settings-section" id="regFieldsSection">
+              <h3>Registration Fields</h3>
+              <p class="desc">
+                Customize what information is collected when registering
+                members. These fields apply to all branches.
+              </p>
+              <div class="card">
+                <div id="regFieldsList" style="margin-bottom: 16px">
+                  <div class="loading">Loading...</div>
+                </div>
+                <div
+                  style="
+                    border-top: 1px solid var(--border-light);
+                    padding-top: 16px;
+                  "
+                >
+                  <div class="card-title">Add Custom Field</div>
+                  <form
+                    id="addFieldForm"
+                    style="
+                      display: flex;
+                      flex-wrap: wrap;
+                      gap: 10px;
+                      align-items: flex-end;
+                    "
+                  >
+                    <div
+                      class="form-group"
+                      style="margin: 0; flex: 1; min-width: 140px"
+                    >
+                      <label class="form-label">Field Label</label>
+                      <input
+                        type="text"
+                        class="form-input"
+                        id="cfLabel"
+                        placeholder="e.g. Address"
+                        required
+                      />
+                    </div>
+                    <div class="form-group" style="margin: 0; width: 130px">
+                      <label class="form-label">Type</label>
+                      <select class="form-select" id="cfType">
+                        <option value="text">Text</option>
+                        <option value="textarea">Text Area</option>
+                        <option value="email">Email</option>
+                        <option value="phone">Phone</option>
+                        <option value="date">Date</option>
+                        <option value="number">Number</option>
+                        <option value="select">Dropdown</option>
+                      </select>
+                    </div>
+                    <div
+                      class="form-group"
+                      style="margin: 0; flex: 1; min-width: 140px"
+                      id="cfOptionsWrap"
+                    >
+                      <label class="form-label"
+                        >Options (comma-separated)</label
+                      >
+                      <input
+                        type="text"
+                        class="form-input"
+                        id="cfOptions"
+                        placeholder="Male, Female"
+                      />
+                    </div>
+                    <div
+                      class="form-group"
+                      style="
+                        margin: 0;
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                        padding-bottom: 2px;
+                      "
+                    >
+                      <input
+                        type="checkbox"
+                        id="cfRequired"
+                        style="width: 16px; height: 16px"
+                      />
+                      <label
+                        for="cfRequired"
+                        class="form-label"
+                        style="margin: 0"
+                        >Required</label
+                      >
+                    </div>
+                    <button type="submit" class="btn btn-green btn-sm">
+                      Add Field
+                    </button>
+                  </form>
+                </div>
               </div>
             </div>
 
@@ -2436,6 +3719,166 @@
       </div>
     </div>
 
+    <!-- ===== MEMBER EDIT MODAL ===== -->
+    <div
+      id="memberEditModal"
+      style="
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 1010;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        align-items: center;
+        justify-content: center;
+      "
+    >
+      <div
+        style="
+          background: var(--bg);
+          border-radius: 16px;
+          width: 92%;
+          max-width: 560px;
+          max-height: 86vh;
+          overflow-y: auto;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        "
+      >
+        <div style="padding: 20px 24px; border-bottom: 1px solid var(--border)">
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+            "
+          >
+            <h3 style="font-size: 16px; margin: 0">Edit Member</h3>
+            <button
+              onclick="closeMemberEditModal()"
+              style="
+                background: none;
+                border: none;
+                cursor: pointer;
+                color: var(--fg3);
+                padding: 4px;
+              "
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <form id="memberEditForm" style="padding: 22px 24px">
+          <input type="hidden" id="editMemberId" />
+          <div
+            style="
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 12px;
+              margin-bottom: 12px;
+            "
+          >
+            <div class="form-group" style="margin: 0">
+              <label class="form-label">Full Name</label>
+              <input
+                type="text"
+                id="editMemberName"
+                class="form-input"
+                required
+              />
+            </div>
+            <div class="form-group" style="margin: 0">
+              <label class="form-label">Email</label>
+              <input type="email" id="editMemberEmail" class="form-input" />
+            </div>
+            <div class="form-group" style="margin: 0">
+              <label class="form-label">Phone</label>
+              <input type="text" id="editMemberPhone" class="form-input" />
+            </div>
+            <div class="form-group" style="margin: 0">
+              <label class="form-label">Branch</label>
+              <select id="editMemberBranch" class="form-select"></select>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 12px">
+            <label class="form-label">Update Face Photo (optional)</label>
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                flex-wrap: wrap;
+              "
+            >
+              <button
+                type="button"
+                class="btn btn-outline btn-sm"
+                onclick="
+                  document.getElementById('editMemberPhotoInput').click()
+                "
+              >
+                Choose New Photo
+              </button>
+              <span
+                id="editMemberPhotoName"
+                style="font-size: 12px; color: var(--fg3)"
+                >No file chosen</span
+              >
+            </div>
+            <input
+              type="file"
+              id="editMemberPhotoInput"
+              accept="image/*,.heic,.heif,.webp,.bmp,.tiff,.tif,.raw,.cr2,.nef,.svg,.avif,.dng,.arw"
+              style="display: none"
+            />
+          </div>
+
+          <div
+            id="editCustomFields"
+            style="
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 12px;
+              margin-bottom: 14px;
+            "
+          ></div>
+
+          <div
+            id="editMemberMsg"
+            class="hidden"
+            style="margin-bottom: 12px"
+          ></div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 8px">
+            <button
+              type="button"
+              class="btn btn-outline"
+              onclick="closeMemberEditModal()"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="btn btn-green"
+              id="editMemberSubmitBtn"
+            >
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- Toast container -->
     <div class="toast-container" id="toastContainer"></div>
 
@@ -2463,11 +3906,42 @@
         }, 3500);
       }
 
+      // ==================== ATTENDANCE POPUP ====================
+      function showAttendancePopup(names, alreadyNames) {
+        const marked = names || [];
+        const already = alreadyNames || [];
+        if (marked.length === 0 && already.length === 0) return;
+        const overlay = document.createElement("div");
+        overlay.style.cssText =
+          "position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9999;animation:fadeIn .2s";
+        let listHtml = "";
+        marked.forEach((n) => {
+          listHtml += `<div style="display:flex;align-items:center;gap:8px;padding:6px 0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#25d366" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span style="font-size:14px">${esc(n)}</span></div>`;
+        });
+        already.forEach((n) => {
+          listHtml += `<div style="display:flex;align-items:center;gap:8px;padding:6px 0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#007aff" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><span style="font-size:14px;color:var(--fg3)">${esc(n)} — already marked</span></div>`;
+        });
+        overlay.innerHTML = `<div style="background:var(--bg);border-radius:16px;padding:28px 32px;max-width:360px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+          <div style="width:56px;height:56px;border-radius:50%;background:#25d36620;display:flex;align-items:center;justify-content:center;margin:0 auto 12px">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#25d366" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div style="font-size:18px;font-weight:700;margin-bottom:4px">Attendance Taken!</div>
+          <div style="font-size:13px;color:var(--fg3);margin-bottom:16px">${marked.length} marked${already.length ? ", " + already.length + " already recorded" : ""}</div>
+          <div style="text-align:left;max-height:200px;overflow-y:auto;margin-bottom:16px">${listHtml}</div>
+          <button onclick="this.closest('div[style*=fixed]').remove()" class="btn btn-green" style="width:100%;padding:10px">OK</button>
+        </div>`;
+        document.body.appendChild(overlay);
+        setTimeout(() => {
+          if (overlay.parentNode) overlay.remove();
+        }, 6000);
+      }
+
       // ==================== AUTH ====================
       const TOKEN = localStorage.getItem("token");
       const ADMIN = JSON.parse(localStorage.getItem("admin") || "{}");
       const ORG = JSON.parse(localStorage.getItem("org") || "{}");
-
+      let BRANCH = JSON.parse(localStorage.getItem("branch") || "{}");
+      let BRANCHES = JSON.parse(localStorage.getItem("branches") || "[]");
       if (!TOKEN) {
         window.location.href = "/";
       }
@@ -2498,7 +3972,12 @@
           headers: hdrs,
           body: isForm ? body : JSON.stringify(body),
         });
-        const d = await r.json();
+        let d;
+        try {
+          d = await r.json();
+        } catch {
+          d = { detail: await r.text().catch(() => "Request failed") };
+        }
         if (!r.ok) throw new Error(d.detail || "Request failed");
         return d;
       }
@@ -2512,6 +3991,52 @@
         window.location.href = "/";
       }
 
+      // ==================== BRANCH SWITCHER ====================
+      async function showBranchSwitcher() {
+        if (!BRANCHES.length) return;
+        // Build a simple modal
+        let existing = document.getElementById("branchSwitcherModal");
+        if (existing) existing.remove();
+        const modal = document.createElement("div");
+        modal.id = "branchSwitcherModal";
+        modal.style.cssText =
+          "position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10000;";
+        let opts = BRANCHES.map(
+          (b) =>
+            `<div class="branch-opt" data-id="${b.id}" style="padding:12px 16px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;cursor:pointer;background:${b.id === BRANCH.id ? "#eef2ff" : "#fff"};font-weight:${b.id === BRANCH.id ? "600" : "400"};transition:background 0.15s;"
+            onmouseenter="this.style.background='#eef2ff'" onmouseleave="this.style.background='${b.id === BRANCH.id ? "#eef2ff" : "#fff"}'"
+            onclick="switchBranch(${b.id})">${b.name}${b.is_headquarters ? " <span style=&quot;color:#6366f1;font-size:0.75rem&quot;>HQ</span>" : ""}${b.id === BRANCH.id ? " <span style=&quot;color:#22c55e;font-size:0.8rem&quot;>✓</span>" : ""}</div>`,
+        ).join("");
+        modal.innerHTML = `<div style="background:#fff;border-radius:12px;padding:24px;max-width:360px;width:90%;max-height:60vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.15);">
+          <h3 style="margin:0 0 4px 0;font-size:1.1rem;">Switch Branch</h3>
+          <p style="color:#64748b;font-size:0.85rem;margin:0 0 16px 0;">${ORG.name}</p>
+          ${opts}
+          <button onclick="document.getElementById('branchSwitcherModal').remove()" style="margin-top:8px;width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;cursor:pointer;font-size:0.9rem;">Cancel</button>
+        </div>`;
+        modal.addEventListener("click", (e) => {
+          if (e.target === modal) modal.remove();
+        });
+        document.body.appendChild(modal);
+      }
+
+      async function switchBranch(branchId) {
+        if (branchId === BRANCH.id) {
+          document.getElementById("branchSwitcherModal")?.remove();
+          return;
+        }
+        try {
+          const d = await apiPost("/auth/switch-branch", {
+            branch_id: branchId,
+          });
+          localStorage.setItem("token", d.token);
+          localStorage.setItem("branch", JSON.stringify(d.branch));
+          // Reload to apply new branch context
+          window.location.reload();
+        } catch (err) {
+          showToast(err.message, "error");
+        }
+      }
+
       // Set user info
       document.getElementById("userName").textContent =
         ADMIN.full_name || "Admin";
@@ -2523,6 +4048,13 @@
         .toUpperCase();
       document.getElementById("orgNameSidebar").textContent =
         ORG.name || "Organization";
+      document.getElementById("branchNameSidebar").textContent = BRANCH.name
+        ? "📍 " + BRANCH.name
+        : "";
+      // Show admin console link for owners
+      if (ADMIN.role === "owner") {
+        document.getElementById("adminConsoleLink").style.display = "";
+      }
       document.getElementById("dashOrgName").textContent =
         (ORG.name || "Your") + " overview";
 
@@ -2542,6 +4074,8 @@
         if (page === "records") loadRecords();
         if (page === "meetings") loadMeetings();
         if (page === "settings") loadSettings();
+        if (page === "analytics") loadAnalytics();
+        if (page === "branches") loadBranches();
       }
       navBtns.forEach((b) =>
         b.addEventListener("click", () => nav(b.dataset.page)),
@@ -2668,6 +4202,7 @@
           fd.append("file", qrPhoto);
           const email = document.getElementById("qrEmail").value.trim();
           if (email) fd.append("email", email);
+          if (BRANCH.id) fd.append("branch_id", BRANCH.id);
           const data = await apiPost("/register", fd, true);
           msg.style.display = "block";
           msg.style.background = "var(--green-light)";
@@ -2684,6 +4219,7 @@
           btn.textContent = "Add";
           btn.disabled = true;
           _memberCache = null; // bust cache
+          await loadMembers();
           await loadDashboard();
           setTimeout(() => {
             msg.style.display = "none";
@@ -2787,9 +4323,56 @@
                 )
                 .join("");
           }
+
+          // Load branch overview for owners
+          if (ADMIN.role === "owner") {
+            try {
+              const summary = await apiGet("/analytics/dashboard-summary");
+              const sec = document.getElementById("branchOverviewSection");
+              const grid = document.getElementById("branchOverviewGrid");
+              const totalEl = document.getElementById("branchOverviewTotal");
+              sec.classList.remove("hidden");
+              totalEl.textContent = `${summary.total_members} total members across ${summary.total_branches} branch${summary.total_branches !== 1 ? "es" : ""}`;
+              grid.innerHTML = summary.branches
+                .map((b) => {
+                  const pct =
+                    summary.total_members > 0
+                      ? Math.round((b.members / summary.total_members) * 100)
+                      : 0;
+                  return `<div style="background:var(--bg);border:1px solid var(--border-light);border-radius:14px;padding:16px;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                    <div style="font-size:13px;font-weight:600">${esc(b.name)}</div>
+                    ${b.is_headquarters ? '<span style="font-size:9px;font-weight:600;background:var(--blue);color:#fff;padding:2px 6px;border-radius:8px">HQ</span>' : ""}
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+                    <div style="text-align:center;padding:8px;background:var(--bg2);border-radius:8px">
+                      <div style="font-size:18px;font-weight:700;color:var(--fg)">${b.members}</div>
+                      <div style="font-size:10px;color:var(--fg3)">Members</div>
+                    </div>
+                    <div style="text-align:center;padding:8px;background:var(--bg2);border-radius:8px">
+                      <div style="font-size:18px;font-weight:700;color:var(--green)">${b.today_attendance}</div>
+                      <div style="font-size:10px;color:var(--fg3)">Today</div>
+                    </div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <div style="flex:1;height:6px;background:var(--bg2);border-radius:99px;overflow:hidden">
+                      <div style="height:100%;width:${pct}%;background:var(--blue);border-radius:99px;transition:width .5s"></div>
+                    </div>
+                    <span style="font-size:11px;font-weight:600;color:var(--fg3)">${pct}%</span>
+                  </div>
+                  <div style="margin-top:8px;display:flex;justify-content:space-between;font-size:10px;color:var(--fg3)">
+                    <span>${b.meetings} meeting${b.meetings !== 1 ? "s" : ""}</span>
+                    <span>${b.attendance_30d} records (30d)</span>
+                  </div>
+                </div>`;
+                })
+                .join("");
+            } catch (ex) {
+              /* ignore if not owner or endpoint fails */
+            }
+          }
         } catch (e) {
-          document.getElementById("todayMembers").innerHTML =
-            `<div class="alert alert-err"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>${esc(e.message)}</span></div>`;
+          console.error("loadDashboard error:", e);
         }
       }
 
@@ -2829,7 +4412,11 @@
 
       let realtimeRunning = false;
       let realtimeTimer = null;
-      let realtimeResults = { members: new Map(), visitors: new Map() }; // track real-time results
+      let realtimeResults = {
+        members: new Map(),
+        visitors: new Map(),
+        alreadyMarkedVisitors: new Map(),
+      }; // track real-time results
 
       async function startCam() {
         try {
@@ -2843,7 +4430,11 @@
           videoIndicator.classList.remove("hidden");
           camActions.classList.add("hidden");
           camLive.classList.remove("hidden");
-          realtimeResults = { members: new Map(), visitors: new Map() };
+          realtimeResults = {
+            members: new Map(),
+            visitors: new Map(),
+            alreadyMarkedVisitors: new Map(),
+          };
         } catch {
           showErr("recError", "Could not access camera.");
         }
@@ -2866,7 +4457,11 @@
       function startRealtime() {
         if (realtimeRunning) return;
         realtimeRunning = true;
-        realtimeResults = { members: new Map(), visitors: new Map() };
+        realtimeResults = {
+          members: new Map(),
+          visitors: new Map(),
+          alreadyMarkedVisitors: new Map(),
+        };
         const btn = document.getElementById("btnRealtime");
         btn.textContent = "Stop Real-time";
         btn.style.background = "var(--red)";
@@ -2898,10 +4493,10 @@
           cvs.height = video.videoHeight;
           cvs.getContext("2d").drawImage(video, 0, 0);
           const blob = await new Promise((r) =>
-            cvs.toBlob(r, "image/jpeg", 0.8),
+            cvs.toBlob(r, "image/jpeg", 0.85),
           );
           if (!blob) {
-            realtimeTimer = setTimeout(realtimeScan, 3000);
+            realtimeTimer = setTimeout(realtimeScan, 1500);
             return;
           }
 
@@ -2909,7 +4504,21 @@
           fd.append("file", new File([blob], "rt.jpg", { type: "image/jpeg" }));
           const selMtg = document.getElementById("recMeetingSelect");
           if (selMtg && selMtg.value) fd.append("meeting_id", selMtg.value);
+          if (BRANCH.id) fd.append("branch_id", BRANCH.id);
           const data = await apiPost("/recognize", fd, true);
+
+          // Show re-registration warning once during realtime
+          if (
+            data.needs_reregister &&
+            data.needs_reregister.length > 0 &&
+            !window._rtReregWarnShown
+          ) {
+            window._rtReregWarnShown = true;
+            showToast(
+              `${data.needs_reregister.length} member(s) need face re-registration for new AI model`,
+              "warning",
+            );
+          }
 
           // Update annotated preview overlay
           if (data.annotated_image) {
@@ -2943,6 +4552,16 @@
             }
           });
 
+          // Track already-marked visitors
+          (data.already_marked_visitors || []).forEach((v) => {
+            if (!realtimeResults.alreadyMarkedVisitors.has(v.id)) {
+              realtimeResults.alreadyMarkedVisitors.set(v.id, {
+                id: v.id,
+                label: v.label,
+              });
+            }
+          });
+
           // Render live results
           renderRealtimeResults();
 
@@ -2958,7 +4577,7 @@
         }
 
         if (realtimeRunning) {
-          realtimeTimer = setTimeout(realtimeScan, 3000); // scan every 3 seconds
+          realtimeTimer = setTimeout(realtimeScan, 1500); // scan every 1.5 seconds
         }
       }
 
@@ -2992,6 +4611,13 @@
           vHtml += `<div class="result-item" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--rs);border:1px solid rgba(255,159,10,.2);margin-bottom:6px;background:var(--orange-light);animation:fadeIn .3s">
             <div style="width:36px;height:36px;border-radius:8px;overflow:hidden;border:2px solid var(--orange);flex-shrink:0">${v.face_crop ? '<img src="' + v.face_crop + '" alt="" style="width:100%;height:100%;object-fit:cover">' : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--orange-light);color:var(--orange);font-weight:700">?</div>'}</div>
             <div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--orange)">New Face Detected</div><div style="font-size:11px;color:var(--fg3)">${v.returning ? "Returning visitor" : "First time seen"} · Added to Visitors</div></div>
+          </div>`;
+        });
+        realtimeResults.alreadyMarkedVisitors.forEach((v) => {
+          vHtml += `<div class="result-item" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--rs);border:1px solid rgba(0,122,255,.15);margin-bottom:6px;background:var(--blue-light);animation:fadeIn .3s">
+            <div class="avatar" style="background:var(--blue-light);color:var(--blue)">V</div>
+            <div style="flex:1"><div style="font-size:13px;font-weight:600">${esc(v.label)}</div><div style="font-size:11px;color:var(--fg3)">Already marked today</div></div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
           </div>`;
         });
         vEl.innerHTML = vHtml;
@@ -3040,127 +4666,108 @@
         const f = e.target.files[0];
         if (!f) return;
         const resEl = document.getElementById("recResults");
-        resEl.innerHTML =
-          '<div class="loading">Processing video... extracting frames</div>';
 
-        // Create a video element to extract frames
-        const vid = document.createElement("video");
-        vid.muted = true;
-        vid.preload = "auto";
-        const url = URL.createObjectURL(f);
-        vid.src = url;
+        // Always use server-side processing — handles ALL formats and sizes via ffmpeg
+        resEl.innerHTML = `<div class="loading">Uploading video (${(f.size / 1024 / 1024).toFixed(1)} MB)... This may take a moment for large files.</div>`;
+        try {
+          const fd = new FormData();
+          fd.append("file", f);
+          const selMtg = document.getElementById("recMeetingSelect");
+          if (selMtg && selMtg.value) fd.append("meeting_id", selMtg.value);
+          if (BRANCH.id) fd.append("branch_id", BRANCH.id);
 
-        vid.addEventListener("loadedmetadata", async () => {
-          const duration = vid.duration;
-          const interval = Math.max(2, duration / 5); // Extract ~5 frames
-          let allRecognized = [];
-          let totalFaces = 0;
-          const frameTimes = [];
-          const annotatedFrames = []; // store annotated base64 images
-          for (let t = 0; t < duration; t += interval) frameTimes.push(t);
-          if (frameTimes.length === 0) frameTimes.push(0);
-
-          for (let i = 0; i < frameTimes.length; i++) {
-            const time = frameTimes[i];
-            resEl.innerHTML = `<div class="loading">Processing frame ${i + 1} of ${frameTimes.length}...</div>`;
-            vid.currentTime = time;
-            await new Promise((r) =>
-              vid.addEventListener("seeked", r, { once: true }),
-            );
-            cvs.width = vid.videoWidth;
-            cvs.height = vid.videoHeight;
-            cvs.getContext("2d").drawImage(vid, 0, 0);
-            const blob = await new Promise((r) =>
-              cvs.toBlob(r, "image/jpeg", 0.85),
-            );
-            if (!blob) continue;
-            try {
-              const fd = new FormData();
-              fd.append(
-                "file",
-                new File([blob], "frame.jpg", { type: "image/jpeg" }),
-              );
-              const data = await apiPost("/recognize", fd, true);
-              totalFaces += data.total_faces;
-              // Collect annotated frame
-              if (data.annotated_image) {
-                annotatedFrames.push({
-                  src: "data:image/jpeg;base64," + data.annotated_image,
-                  time: time.toFixed(1),
-                  faces: data.total_faces,
-                  members: (data.faces || []).filter(
-                    (f) => f.type === "member",
-                  ),
-                  visitors: (data.faces || []).filter(
-                    (f) => f.type === "visitor",
-                  ),
-                });
-              }
-              (data.recognized || []).forEach((n) => {
-                if (
-                  n !== "UNKNOWN" &&
-                  n !== "NO_REGISTERED_MEMBERS" &&
-                  !allRecognized.includes(n)
-                )
-                  allRecognized.push(n);
-              });
-              // Also collect from faces array
-              (data.faces || []).forEach((face) => {
-                if (
-                  face.type === "member" &&
-                  face.name &&
-                  !allRecognized.includes(face.name)
-                )
-                  allRecognized.push(face.name);
-              });
-            } catch {}
+          // Use longer timeout for large files
+          const resp = await api("/recognize-video", {
+            method: "POST",
+            body: fd,
+          });
+          let data;
+          try {
+            data = await resp.json();
+          } catch {
+            throw new Error(await resp.text().catch(() => "Server error"));
           }
-          URL.revokeObjectURL(url);
+          if (!resp.ok)
+            throw new Error(data.detail || "Video recognition failed");
 
-          // Build results HTML with video playback of annotated frames
-          let html = `<div style="padding:12px;background:var(--bg2);border-radius:var(--rs);margin-bottom:12px"><div style="font-size:14px;font-weight:600">${totalFaces} faces scanned across ${frameTimes.length} frames</div><div style="font-size:12px;color:var(--fg2)">${allRecognized.length} unique members identified</div></div>`;
+          if (data.error) {
+            resEl.innerHTML = `<div class="result-item unk" style="border-color:rgba(255,59,48,.2)"><div style="font-size:13px;color:var(--red)">${esc(data.error)}</div></div>`;
+            e.target.value = "";
+            return;
+          }
 
-          // Annotated frames playback
+          let html = `<div style="padding:12px;background:var(--bg2);border-radius:var(--rs);margin-bottom:12px">
+            <div style="font-size:14px;font-weight:600">${data.total_faces} faces found across ${data.frames_processed} frames</div>
+            <div style="font-size:12px;color:var(--fg2)">${(data.recognized || []).length} unique members &middot; ${(data.new_visitors || []).length} visitors</div>
+          </div>`;
+
+          // Show attendance popup for video results
+          const vidMarked = data.attendance_marked || [];
+          const vidAlready = data.already_marked_today || [];
+          if (vidMarked.length > 0 || vidAlready.length > 0) {
+            showAttendancePopup(vidMarked, vidAlready);
+          }
+
+          const annotatedFrames = (data.annotated_frames || []).map(
+            (src, i) => ({
+              src: "data:image/jpeg;base64," + src,
+              time: ((i + 1) * 2).toFixed(1),
+              faces: 0,
+            }),
+          );
+
           if (annotatedFrames.length > 0) {
-            // Show first frame in preview
             previewImg.src = annotatedFrames[0].src;
             previewImg.style.display = "block";
             placeholder.style.display = "none";
-
             html += `<div style="margin-bottom:12px">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-                <div style="font-size:13px;font-weight:600">Frame Playback</div>
+                <div style="font-size:13px;font-weight:600">Processed Frames</div>
                 <div style="display:flex;align-items:center;gap:6px">
-                  <button class="btn btn-outline btn-sm" id="vpPrev" onclick="vpNav(-1)" style="padding:2px 8px">&larr;</button>
+                  <button class="btn btn-outline btn-sm" onclick="vpNav(-1)" style="padding:2px 8px">&larr;</button>
                   <span id="vpCounter" style="font-size:11px;color:var(--fg3);min-width:50px;text-align:center">1 / ${annotatedFrames.length}</span>
-                  <button class="btn btn-outline btn-sm" id="vpNext" onclick="vpNav(1)" style="padding:2px 8px">&rarr;</button>
+                  <button class="btn btn-outline btn-sm" onclick="vpNav(1)" style="padding:2px 8px">&rarr;</button>
                   <button class="btn btn-green btn-sm" id="vpPlayBtn" onclick="vpTogglePlay()" style="padding:2px 10px">&#9654; Play</button>
                 </div>
               </div>
-              <div id="vpFrameInfo" style="font-size:11px;color:var(--fg3);margin-bottom:4px">
-                Frame 1 &middot; ${annotatedFrames[0].time}s &middot; ${annotatedFrames[0].faces} face${annotatedFrames[0].faces !== 1 ? "s" : ""}
-              </div>
+              <div id="vpFrameInfo" style="font-size:11px;color:var(--fg3);margin-bottom:4px">Frame 1</div>
             </div>`;
-          }
-
-          if (allRecognized.length === 0) {
-            html +=
-              '<div class="result-item unk" style="border-color:rgba(255,159,10,.2)"><div class="avatar" style="background:var(--orange-light);color:var(--orange)">?</div><div><div style="font-size:13px;font-weight:500">No members recognized</div><div style="font-size:11px;color:var(--fg3)">Try registering members first</div></div></div>';
-          } else {
-            allRecognized.forEach((name) => {
-              html += `<div class="result-item ok"><div class="avatar">${name.charAt(0).toUpperCase()}</div><div><div style="font-size:13px;font-weight:500">${esc(name)}</div><div style="font-size:11px;color:var(--fg3)">Attendance marked</div></div><span style="margin-left:auto;color:var(--green)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span></div>`;
-            });
-          }
-          resEl.innerHTML = html;
-
-          // Setup video playback controls
-          if (annotatedFrames.length > 0) {
             window._vpFrames = annotatedFrames;
             window._vpIdx = 0;
             window._vpPlaying = false;
             window._vpTimer = null;
           }
-        });
+
+          (data.attendance_marked || []).forEach((name) => {
+            html += `<div class="result-item ok"><div class="avatar">${name.charAt(0).toUpperCase()}</div><div><div style="font-size:13px;font-weight:500">${esc(name)}</div><div style="font-size:11px;color:var(--fg3)">Attendance marked</div></div><span style="margin-left:auto;color:var(--green)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span></div>`;
+          });
+          (data.already_marked_today || []).forEach((name) => {
+            html += `<div class="result-item ok" style="opacity:0.7"><div class="avatar">${name.charAt(0).toUpperCase()}</div><div><div style="font-size:13px;font-weight:500">${esc(name)}</div><div style="font-size:11px;color:var(--fg3)">Already marked today</div></div></div>`;
+          });
+          if ((data.recognized || []).length === 0) {
+            html +=
+              '<div class="result-item unk" style="border-color:rgba(255,159,10,.2)"><div class="avatar" style="background:var(--orange-light);color:var(--orange)">?</div><div><div style="font-size:13px;font-weight:500">No members recognized</div><div style="font-size:11px;color:var(--fg3)">Try registering members first</div></div></div>';
+          }
+          (data.new_visitors || []).forEach((v) => {
+            html += `<div class="result-item" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--rs);border:1px solid rgba(255,159,10,.2);margin-bottom:6px;background:var(--orange-light)">
+              <div class="avatar" style="background:var(--orange-light);color:var(--orange)">V</div>
+              <div style="flex:1"><div style="font-size:13px;font-weight:500;color:var(--orange)">${v.label || "Visitor #" + v.id}</div><div style="font-size:11px;color:var(--fg3)">${v.is_returning ? "Returning visitor" : "First time seen"}</div></div>
+            </div>`;
+          });
+          (data.already_marked_visitors || []).forEach((v) => {
+            html += `<div class="result-item" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--rs);border:1px solid rgba(0,122,255,.15);margin-bottom:6px;background:var(--blue-light)">
+              <div class="avatar" style="background:var(--blue-light);color:var(--blue)">V</div>
+              <div style="flex:1"><div style="font-size:13px;font-weight:500">${esc(v.label)}</div><div style="font-size:11px;color:var(--fg3)">Already marked today</div></div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>`;
+          });
+
+          resEl.innerHTML = html;
+          e.target.value = "";
+          return;
+        } catch (err) {
+          resEl.innerHTML = `<div class="result-item unk" style="border-color:rgba(255,59,48,.2)"><div style="font-size:13px;color:var(--red)">Upload failed: ${esc(err.message)}. Try a smaller file or different format.</div></div>`;
+        }
         e.target.value = "";
       }
 
@@ -3213,6 +4820,7 @@
           const selMeeting = document.getElementById("recMeetingSelect");
           if (selMeeting && selMeeting.value)
             fd.append("meeting_id", selMeeting.value);
+          if (BRANCH.id) fd.append("branch_id", BRANCH.id);
           const data = await apiPost("/recognize", fd, true);
 
           // Show annotated image with bounding boxes
@@ -3228,6 +4836,11 @@
           );
           const alreadyMarked = data.already_marked_today || [];
           const newlyMarked = data.attendance_marked || [];
+
+          // Show attendance popup
+          if (newlyMarked.length > 0 || alreadyMarked.length > 0) {
+            showAttendancePopup(newlyMarked, alreadyMarked);
+          }
 
           // Toast summary
           if (newlyMarked.length > 0)
@@ -3245,9 +4858,26 @@
               `${visitors.length} new face${visitors.length !== 1 ? "s" : ""} detected`,
               "warning",
             );
+          const alreadyMarkedVisitors = data.already_marked_visitors || [];
+          if (alreadyMarkedVisitors.length > 0)
+            showToast(
+              `${alreadyMarkedVisitors.map((v) => v.label).join(", ")} already marked today`,
+              "info",
+            );
           if (data.total_faces === 0) showToast("No faces detected", "info");
 
-          let html = `<div style="padding:12px;background:var(--bg2);border-radius:var(--rs);margin-bottom:12px">
+          let html = "";
+
+          // Show re-registration warning if some members have old embeddings
+          if (data.needs_reregister && data.needs_reregister.length > 0) {
+            html += `<div style="padding:10px 12px;background:#fff3cd;border:1px solid #ffc107;border-radius:var(--rs);margin-bottom:10px;font-size:12px">
+              <div style="font-weight:600;color:#856404;margin-bottom:4px">⚠ Model Upgrade Required</div>
+              <div style="color:#856404">These members need to re-register their face photo with the new AI model: <strong>${data.needs_reregister.join(", ")}</strong></div>
+              <div style="color:#856404;margin-top:4px">Go to <em>Members → Edit → Update Photo</em> to re-register.</div>
+            </div>`;
+          }
+
+          html += `<div style="padding:12px;background:var(--bg2);border-radius:var(--rs);margin-bottom:12px">
             <div style="font-size:14px;font-weight:600">${data.total_faces} face${data.total_faces !== 1 ? "s" : ""} detected</div>
             <div style="font-size:12px;color:var(--fg2)">${members.length} member${members.length !== 1 ? "s" : ""} &middot; ${visitors.length} new face${visitors.length !== 1 ? "s" : ""}${alreadyMarked.length ? ' &middot; <span style="color:var(--blue)">' + alreadyMarked.length + " already marked today</span>" : ""}</div>
           </div>`;
@@ -3278,6 +4908,15 @@
               <div style="width:36px;height:36px;border-radius:8px;overflow:hidden;border:2px solid var(--orange);flex-shrink:0">${f.face_crop ? `<img src="${f.face_crop}" alt="" style="width:100%;height:100%;object-fit:cover">` : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--orange-light);color:var(--orange);font-weight:700">?</div>'}</div>
               <div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--orange)">Unknown Face</div><div style="font-size:11px;color:var(--fg3)">${f.visitor_match_id ? "Returning visitor" : "First time seen"} &middot; Added to New Members</div></div>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>`;
+          });
+
+          // Show already-marked visitors
+          alreadyMarkedVisitors.forEach((v) => {
+            html += `<div class="result-item" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--rs);border:1px solid rgba(0,122,255,.15);margin-bottom:6px;background:var(--blue-light)">
+              <div class="avatar" style="background:var(--blue-light);color:var(--blue)">V</div>
+              <div style="flex:1"><div style="font-size:13px;font-weight:600">${esc(v.label)}</div><div style="font-size:11px;color:var(--fg3)">Already marked today</div></div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
             </div>`;
           });
 
@@ -3334,6 +4973,16 @@
         b.className = c.classList.contains("hidden")
           ? "btn btn-green"
           : "btn btn-outline";
+        // Inject custom fields when opening
+        if (!c.classList.contains("hidden")) {
+          populateBranchSelectors();
+          const cfContainer = document.getElementById("regCustomFields");
+          if (cfContainer) {
+            const html = buildCustomFieldsHTML("reg");
+            cfContainer.innerHTML = html;
+            cfContainer.style.display = html ? "grid" : "none";
+          }
+        }
       }
 
       function handleRegPhoto(e) {
@@ -3367,6 +5016,11 @@
             fd.append("email", document.getElementById("regEmail").value);
           if (document.getElementById("regPhone").value)
             fd.append("phone", document.getElementById("regPhone").value);
+          const selectedBranch =
+            document.getElementById("regBranchSelect").value;
+          if (selectedBranch) fd.append("branch_id", selectedBranch);
+          const cfValues = collectCustomFieldValues("reg");
+          if (cfValues) fd.append("custom_fields", cfValues);
           const data = await apiPost("/register", fd, true);
           showMsg("regMessage", data.message, "ok");
           showToast(
@@ -3421,6 +5075,7 @@
 
       async function loadMembers() {
         try {
+          populateBranchSelectors();
           const data = await apiGet("/members");
           document.getElementById("memberCount").textContent =
             `${data.total} registered member${data.total !== 1 ? "s" : ""}`;
@@ -3432,13 +5087,19 @@
             el.innerHTML = `<div class="members-grid">${data.members
               .map((m) => {
                 const photo = m.profile_photo;
+                const branchLabel = m.branch_name
+                  ? `<span style="font-size:10px;background:var(--blue-light);color:var(--blue);padding:1px 6px;border-radius:4px">${esc(m.branch_name)}</span>`
+                  : "";
                 return `<div class="member-card">
           <div class="avatar">${photo ? `<img src="${photo}" alt="">` : m.name.charAt(0).toUpperCase()}</div>
           <div class="info">
-            <div class="name">${esc(m.name)}</div>
+            <div class="name">${esc(m.name)} ${branchLabel}</div>
             <div class="sub">${m.email || m.phone || `ID: ${m.id}`}</div>
           </div>
-          <button class="btn-ghost danger" onclick="deleteMember(${m.id},'${esc(m.name)}')" title="Remove"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+          <div style="display:flex;gap:4px">
+            <button class="btn-ghost" onclick="openMemberEditModal(${m.id})" title="Edit"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+            <button class="btn-ghost danger" onclick="deleteMember(${m.id},'${esc(m.name)}')" title="Remove"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+          </div>
         </div>`;
               })
               .join("")}</div>`;
@@ -3539,11 +5200,22 @@
                 const typeBadge =
                   r.member_type === "new_member"
                     ? '<span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:#fff7ed;color:#ea580c">New Member</span>'
-                    : '<span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:#f0fdf4;color:#16a34a">Member</span>';
+                    : r.member_type === "visitor"
+                      ? '<span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:var(--orange-light);color:#c47e00">Visitor</span>'
+                      : '<span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:#f0fdf4;color:#16a34a">Member</span>';
+                // Cross-branch tag: show home branch if different from marking branch
+                const crossBranch =
+                  r.branch_name &&
+                  r.marked_at_branch_name &&
+                  r.branch_name !== r.marked_at_branch_name
+                    ? `<span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;background:var(--blue-light);color:var(--blue);margin-left:4px" title="Home branch: ${esc(r.branch_name)}">from ${esc(r.branch_name)}</span>`
+                    : r.branch_name
+                      ? `<span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:500;background:var(--bg2);color:var(--fg3);margin-left:4px">${esc(r.branch_name)}</span>`
+                      : "";
                 const meetingLabel = r.meeting_name
                   ? `<span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;background:var(--bg2);color:var(--fg2)">${esc(r.meeting_name)}</span>`
                   : '<span style="font-size:11px;color:var(--fg3)">—</span>';
-                return `<tr><td>${photoHtml}</td><td style="font-weight:500">${esc(r.name)}</td><td>${meetingLabel}</td><td style="color:var(--fg3);font-size:12px">${dateStr}</td><td style="color:var(--fg3);font-size:12px">${timeStr}</td><td>${typeBadge}</td><td><button class="btn-ghost danger" onclick="deleteRec(${r.id})"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></td></tr>`;
+                return `<tr><td>${photoHtml}</td><td style="font-weight:500">${esc(r.name)}${crossBranch}</td><td>${meetingLabel}</td><td style="color:var(--fg3);font-size:12px">${dateStr}</td><td style="color:var(--fg3);font-size:12px">${timeStr}</td><td>${typeBadge}</td><td><button class="btn-ghost danger" onclick="deleteRec(${r.id})"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></td></tr>`;
               })
               .join("")}</tbody></table></div>`;
             if (data.total > pageSize) {
@@ -3601,6 +5273,20 @@
           .charAt(0)
           .toUpperCase();
 
+        // Populate invite branch selector
+        try {
+          const invSel = document.getElementById("invBranch");
+          if (invSel && invSel.options.length <= 1) {
+            const brs = await apiGet("/branches/");
+            brs.forEach((b) => {
+              const o = document.createElement("option");
+              o.value = b.id;
+              o.textContent = b.name;
+              invSel.appendChild(o);
+            });
+          }
+        } catch {}
+
         try {
           const data = await apiGet("/auth/team");
           const el = document.getElementById("teamList");
@@ -3612,15 +5298,39 @@
                   : t.role === "admin"
                     ? "role-admin"
                     : "role-viewer";
+              const branchLabel = t.branch_name
+                ? `<span style="font-size:10px;background:var(--blue-light);color:var(--blue);padding:2px 6px;border-radius:4px;margin-left:6px">${esc(t.branch_name)}</span>`
+                : "";
               return `<div class="team-row">
         <div class="avatar" style="width:36px;height:36px">${t.full_name.charAt(0).toUpperCase()}</div>
-        <div class="info"><div class="name">${esc(t.full_name)}</div><div class="email">${esc(t.email)}</div></div>
+        <div class="info"><div class="name">${esc(t.full_name)}${branchLabel}</div><div class="email">${esc(t.email)}</div></div>
         <span class="role-badge ${roleCls}">${t.role}</span>
         ${ADMIN.role === "owner" && t.id !== ADMIN.id ? `<button class="btn-ghost danger" onclick="removeTeam(${t.id},'${esc(t.full_name)}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>` : ""}
       </div>`;
             })
             .join("");
         } catch {}
+
+        // Load registration fields
+        await loadRegFields();
+
+        // Check SMS status
+        try {
+          const sms = await apiGet("/sms/status");
+          const el = document.getElementById("smsStatus");
+          if (sms.configured) {
+            el.innerHTML = `<div style="width:10px;height:10px;border-radius:50%;background:var(--green)"></div>
+              <div><div style="font-size:13px;font-weight:600;color:var(--green-dark)">SMS Active</div>
+              <div style="font-size:11px;color:var(--fg3)">Provider: ${esc(sms.provider)} &middot; Members with phone numbers will receive attendance SMS</div></div>`;
+          } else {
+            el.innerHTML = `<div style="width:10px;height:10px;border-radius:50%;background:var(--fg3)"></div>
+              <div><div style="font-size:13px;font-weight:600">SMS Not Configured</div>
+              <div style="font-size:11px;color:var(--fg3)">Set <code>SMS_PROVIDER</code>, and provider credentials as environment variables to enable SMS notifications</div></div>`;
+          }
+        } catch {
+          document.getElementById("smsStatus").innerHTML =
+            '<div style="font-size:12px;color:var(--fg3)">Could not check SMS status</div>';
+        }
       }
 
       document
@@ -3628,12 +5338,15 @@
         .addEventListener("submit", async (e) => {
           e.preventDefault();
           try {
-            const data = await apiPost("/auth/invite", {
+            const body = {
               full_name: document.getElementById("invName").value,
               email: document.getElementById("invEmail").value,
               password: document.getElementById("invPass").value,
               role: document.getElementById("invRole").value,
-            });
+            };
+            const branchVal = document.getElementById("invBranch").value;
+            if (branchVal) body.branch_id = parseInt(branchVal);
+            const data = await apiPost("/auth/invite", body);
             showMsg("inviteMessage", data.message, "ok");
             document.getElementById("invName").value = "";
             document.getElementById("invEmail").value = "";
@@ -3650,6 +5363,336 @@
           await apiDel(`/auth/team/${id}`);
           await loadSettings();
         } catch {}
+      }
+
+      // ==================== REGISTRATION FIELDS ====================
+      let _cachedRegFields = null;
+
+      async function loadRegFields() {
+        const list = document.getElementById("regFieldsList");
+        if (!list) return;
+        try {
+          const data = await apiGet("/registration-fields/");
+          _cachedRegFields = data.fields;
+          if (data.fields.length === 0) {
+            list.innerHTML =
+              '<div style="padding:12px 0;color:var(--fg3);font-size:13px">No custom fields configured yet. Members will be registered with just Name, Email, Phone, and Photo.</div>';
+          } else {
+            list.innerHTML = data.fields
+              .map(
+                (
+                  f,
+                  i,
+                ) => `<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;background:var(--bg);margin-bottom:6px">
+              <span style="font-size:12px;font-weight:700;color:var(--fg3);width:24px">${i + 1}</span>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:600">${esc(f.field_label)}</div>
+                <div style="font-size:11px;color:var(--fg3)">${f.field_type}${f.is_required ? " &middot; required" : ""}${f.options && f.options.length ? " &middot; " + f.options.join(", ") : ""}</div>
+              </div>
+              <button onclick="deleteRegField(${f.id},'${esc(f.field_label)}')" class="btn-ghost danger" style="padding:4px" title="Remove">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </button>
+            </div>`,
+              )
+              .join("");
+          }
+        } catch {
+          list.innerHTML =
+            '<div style="color:var(--fg3);font-size:13px">Could not load fields.</div>';
+        }
+      }
+
+      // Show/hide options input based on field type
+      document
+        .getElementById("cfType")
+        ?.addEventListener("change", function () {
+          document.getElementById("cfOptionsWrap").style.display =
+            this.value === "select" ? "" : "none";
+        });
+      // default hide options
+      if (document.getElementById("cfOptionsWrap"))
+        document.getElementById("cfOptionsWrap").style.display = "none";
+
+      document
+        .getElementById("addFieldForm")
+        ?.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const label = document.getElementById("cfLabel").value.trim();
+          if (!label) return;
+          const type = document.getElementById("cfType").value;
+          const required = document.getElementById("cfRequired").checked;
+          const optStr = document.getElementById("cfOptions").value.trim();
+          const options =
+            type === "select" && optStr
+              ? optStr
+                  .split(",")
+                  .map((s) => s.trim())
+                  .filter(Boolean)
+              : null;
+          const fieldName = label.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+          try {
+            await apiPost("/registration-fields/", {
+              field_name: fieldName,
+              field_label: label,
+              field_type: type,
+              is_required: required,
+              options: options,
+            });
+            showToast(`Field "${label}" added`, "success");
+            document.getElementById("cfLabel").value = "";
+            document.getElementById("cfOptions").value = "";
+            document.getElementById("cfRequired").checked = false;
+            await loadRegFields();
+          } catch (ex) {
+            showToast(ex.message || "Failed to add field", "error");
+          }
+        });
+
+      async function deleteRegField(id, label) {
+        if (!confirm(`Remove field "${label}"?`)) return;
+        try {
+          await apiDel(`/registration-fields/${id}`);
+          showToast(`Field "${label}" removed`, "success");
+          await loadRegFields();
+        } catch {
+          showToast("Failed to remove field", "error");
+        }
+      }
+
+      // ==================== MEMBER EDIT MODAL ====================
+      let editingMemberId = null;
+      let editMemberPhoto = null;
+
+      function populateBranchSelectors() {
+        const regSelect = document.getElementById("regBranchSelect");
+        const editSelect = document.getElementById("editMemberBranch");
+
+        // For registration: owner sees all branches, non-owner sees only their branch
+        if (regSelect) {
+          regSelect.innerHTML = "";
+          if (ADMIN.role === "owner") {
+            BRANCHES.forEach((b) => {
+              const opt = document.createElement("option");
+              opt.value = b.id;
+              opt.textContent = b.name;
+              regSelect.appendChild(opt);
+            });
+          } else {
+            // Non-owner: locked to their branch
+            const opt = document.createElement("option");
+            opt.value = BRANCH.id;
+            opt.textContent = BRANCH.name;
+            opt.selected = true;
+            regSelect.appendChild(opt);
+            regSelect.disabled = true;
+          }
+        }
+
+        // For member edit: same logic
+        if (editSelect) {
+          editSelect.innerHTML = "";
+          if (ADMIN.role === "owner") {
+            BRANCHES.forEach((b) => {
+              const opt = document.createElement("option");
+              opt.value = b.id;
+              opt.textContent = b.name;
+              editSelect.appendChild(opt);
+            });
+          } else {
+            // Non-owner: locked to their branch
+            const opt = document.createElement("option");
+            opt.value = BRANCH.id;
+            opt.textContent = BRANCH.name;
+            opt.selected = true;
+            editSelect.appendChild(opt);
+            editSelect.disabled = true;
+          }
+        }
+      }
+
+      async function openMemberEditModal(memberId) {
+        editingMemberId = memberId;
+        editMemberPhoto = null;
+        const modal = document.getElementById("memberEditModal");
+
+        try {
+          // Backend returns the member object directly (not wrapped in { member: ... }).
+          const member = await apiGet(`/members/${memberId}`);
+
+          // Populate form fields
+          document.getElementById("editMemberId").value = memberId;
+          document.getElementById("editMemberName").value = member.name || "";
+          document.getElementById("editMemberEmail").value = member.email || "";
+          document.getElementById("editMemberPhone").value = member.phone || "";
+
+          // Set branch (owner can change, non-owner locked)
+          const branchSelect = document.getElementById("editMemberBranch");
+          branchSelect.value = member.branch_id || BRANCH.id;
+
+          // Clear photo file input
+          document.getElementById("editMemberPhotoInput").value = "";
+          document.getElementById("editMemberPhotoName").textContent =
+            "No file chosen";
+
+          // Populate custom fields
+          const cfContainer = document.getElementById("editCustomFields");
+          const cfHtml = buildCustomFieldsHTML("edit");
+          cfContainer.innerHTML = cfHtml;
+          cfContainer.style.display = cfHtml ? "grid" : "none";
+
+          // Load custom field values
+          if (member.custom_fields && _cachedRegFields) {
+            let parsed = member.custom_fields;
+            if (typeof parsed === "string") {
+              try {
+                parsed = JSON.parse(parsed);
+              } catch (e) {
+                console.error("Failed to parse custom fields", e);
+                parsed = {};
+              }
+            }
+            _cachedRegFields.forEach((f) => {
+              const el = document.getElementById(`edit_cf_${f.id}`);
+              const val = parsed
+                ? (parsed[f.id] ?? parsed[String(f.id)])
+                : undefined;
+              if (el && val !== undefined && val !== null)
+                el.value = String(val);
+            });
+          }
+
+          // Clear message
+          document.getElementById("editMemberMsg").className = "hidden";
+          document.getElementById("editMemberMsg").innerHTML = "";
+
+          // Show modal
+          modal.style.display = "flex";
+        } catch (err) {
+          showToast("Failed to load member details", "error");
+          console.error(err);
+        }
+      }
+
+      function closeMemberEditModal() {
+        const modal = document.getElementById("memberEditModal");
+        modal.style.display = "none";
+        editingMemberId = null;
+        editMemberPhoto = null;
+      }
+
+      document
+        .getElementById("editMemberPhotoInput")
+        ?.addEventListener("change", (e) => {
+          const f = e.target.files[0];
+          if (!f) {
+            document.getElementById("editMemberPhotoName").textContent =
+              "No file chosen";
+            editMemberPhoto = null;
+            return;
+          }
+          editMemberPhoto = f;
+          document.getElementById("editMemberPhotoName").textContent = f.name;
+        });
+
+      document
+        .getElementById("memberEditForm")
+        ?.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const btn = document.getElementById("editMemberSubmitBtn");
+          const msgEl = document.getElementById("editMemberMsg");
+
+          btn.disabled = true;
+          btn.textContent = "Saving...";
+
+          try {
+            const branchValue =
+              document.getElementById("editMemberBranch").value;
+            const payload = {
+              name: document.getElementById("editMemberName").value.trim(),
+              email:
+                document.getElementById("editMemberEmail").value.trim() || null,
+              phone:
+                document.getElementById("editMemberPhone").value.trim() || null,
+              branch_id: branchValue ? parseInt(branchValue, 10) : null,
+            };
+
+            // Collect custom fields
+            if (_cachedRegFields && _cachedRegFields.length > 0) {
+              const cfValues = {};
+              let hasCF = false;
+              _cachedRegFields.forEach((f) => {
+                const el = document.getElementById(`edit_cf_${f.id}`);
+                if (el && el.value) {
+                  cfValues[f.id] = el.value;
+                  hasCF = true;
+                }
+              });
+              if (hasCF) payload.custom_fields = cfValues;
+            }
+
+            // First, upload photo if provided
+            if (editMemberPhoto) {
+              const photoFd = new FormData();
+              photoFd.append("file", editMemberPhoto);
+              await apiPost(`/members/${editingMemberId}/photo`, photoFd, true);
+            }
+
+            // Then, update member details
+            const res = await api(`/members/${editingMemberId}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+
+            if (!res.ok) {
+              const err = await res.json();
+              throw new Error(err.detail || "Update failed");
+            }
+
+            showMsg("editMemberMsg", "Member updated successfully!", "ok");
+            showToast("Member updated", "success");
+            setTimeout(() => {
+              closeMemberEditModal();
+              loadMembers().catch(() => {});
+            }, 1500);
+          } catch (err) {
+            showMsg("editMemberMsg", err.message || "Update failed", "err");
+            showToast(err.message || "Update failed", "error");
+          } finally {
+            btn.disabled = false;
+            btn.textContent = "Save Changes";
+          }
+        });
+
+      // Build dynamic custom fields for registration forms
+      function buildCustomFieldsHTML(prefix) {
+        if (!_cachedRegFields || _cachedRegFields.length === 0) return "";
+        return _cachedRegFields
+          .map((f) => {
+            const id = `${prefix}_cf_${f.id}`;
+            const req = f.is_required ? "required" : "";
+            let input = "";
+            if (f.field_type === "select") {
+              input = `<select class="form-select" id="${id}" ${req}><option value="">Select...</option>${(f.options || []).map((o) => `<option value="${esc(o)}">${esc(o)}</option>`).join("")}</select>`;
+            } else if (f.field_type === "textarea") {
+              input = `<textarea class="form-input" id="${id}" ${req} rows="2" style="resize:vertical"></textarea>`;
+            } else {
+              const inputType = f.field_type === "phone" ? "tel" : f.field_type;
+              input = `<input type="${inputType}" class="form-input" id="${id}" ${req}>`;
+            }
+            return `<div class="form-group" style="margin:0"><label class="form-label">${esc(f.field_label)}${f.is_required ? " *" : ""}</label>${input}</div>`;
+          })
+          .join("");
+      }
+
+      function collectCustomFieldValues(prefix) {
+        if (!_cachedRegFields || _cachedRegFields.length === 0) return null;
+        const data = {};
+        _cachedRegFields.forEach((f) => {
+          const el = document.getElementById(`${prefix}_cf_${f.id}`);
+          if (el && el.value) data[f.id] = el.value;
+        });
+        return Object.keys(data).length > 0 ? JSON.stringify(data) : null;
       }
 
       // ==================== UTILITIES ====================
@@ -3801,6 +5844,7 @@
           closeVisitorModal();
           showToast(`${name} added as new member`, "success");
           await loadVisitors();
+          await loadMembers();
           await loadDashboard();
         } catch (e) {
           const msg = document.getElementById("vmNewMsg");
@@ -4129,122 +6173,1634 @@
         }
       }
 
+      async function deleteAttendeeRecord(recordId) {
+        if (!confirm("Remove this attendance record?")) return;
+        try {
+          await apiDel(`/attendance/${recordId}`);
+          const row = document.getElementById(`att-row-${recordId}`);
+          if (row) {
+            row.style.transition = "opacity .3s";
+            row.style.opacity = "0";
+            setTimeout(() => {
+              row.remove();
+              // re-number remaining rows in the same tbody
+              const tbody = row.closest ? null : null;
+            }, 300);
+          }
+          showToast("Attendance record removed", "success");
+          // Refresh the full meeting detail to update counts
+          setTimeout(() => _loadMeetingDetail(), 400);
+        } catch {
+          showToast("Failed to remove attendance record", "error");
+        }
+      }
+
+      /* ---- Meeting Detail State ---- */
+      let _mtgDetailId = null;
+      let _mtgDetailPeriod = "all";
+      let _mtgChart = null;
+      let _mtgCustomStart = null;
+      let _mtgCustomEnd = null;
+      let _mtgLastChartData = null;
+      let _mtgLastColor = "#3b82f6";
+
+      function _applyCustomDateRange() {
+        const s = document.getElementById("mtgStartDate")?.value;
+        const e = document.getElementById("mtgEndDate")?.value;
+        if (!s && !e) {
+          showToast("Select at least one date", "error");
+          return;
+        }
+        _mtgCustomStart = s || null;
+        _mtgCustomEnd = e || null;
+        _mtgDetailPeriod = "custom";
+        _loadMeetingDetail();
+      }
+
+      function _toggleChartDataset(index, btn) {
+        if (!_mtgChart) return;
+        const ds = _mtgChart.data.datasets[index];
+        if (!ds) return;
+        ds.hidden = !ds.hidden;
+        btn.classList.toggle("active", !ds.hidden);
+        _mtgChart.update();
+      }
+
+      function _switchChartType(type, btn) {
+        if (!_mtgChart || !_mtgLastChartData) return;
+        // Update active button state
+        btn.parentElement
+          .querySelectorAll(".chart-type-btn")
+          .forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        // Destroy and re-render with new type
+        _mtgChart.destroy();
+        _mtgChart = null;
+        _renderMtgChart(_mtgLastChartData, _mtgLastColor, type);
+      }
+
       async function openMeetingDetail(id) {
+        _mtgDetailId = id;
+        _mtgDetailPeriod = "all";
+        _mtgCustomStart = null;
+        _mtgCustomEnd = null;
         const modal = document.getElementById("meetingDetailModal");
         const content = document.getElementById("meetingDetailContent");
         modal.style.display = "flex";
         content.innerHTML = '<div class="loading">Loading...</div>';
+        document.getElementById("mtgDetailTitle").textContent = "Loading...";
+        await _loadMeetingDetail();
+      }
+
+      async function _loadMeetingDetail() {
+        const content = document.getElementById("meetingDetailContent");
         try {
-          const [stats, history] = await Promise.all([
-            apiGet(`/meetings/${id}/stats`),
-            apiGet(`/meetings/${id}/history`),
-          ]);
-          let html = `<h2 style="margin-bottom:6px">${esc(stats.meeting.name)}</h2>
-            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0">
-              <div style="text-align:center;padding:14px;background:var(--bg2);border-radius:12px">
-                <div style="font-size:22px;font-weight:700">${stats.total_sessions}</div>
-                <div style="font-size:11px;color:var(--fg3)">Sessions</div>
+          let url = `/meetings/${_mtgDetailId}/full-history?period=${_mtgDetailPeriod === "custom" ? "all" : _mtgDetailPeriod}`;
+          if (_mtgDetailPeriod === "custom") {
+            if (_mtgCustomStart) url += `&start_date=${_mtgCustomStart}`;
+            if (_mtgCustomEnd) url += `&end_date=${_mtgCustomEnd}`;
+          }
+          const data = await apiGet(url);
+          const m = data.meeting;
+          document.getElementById("mtgDetailTitle").textContent = m.name;
+
+          // Compute some extra stats
+          const totalAttendees = data.sessions.reduce(
+            (s, sess) => s + sess.members + sess.visitors,
+            0,
+          );
+          const avgPerSession =
+            data.total_sessions > 0
+              ? Math.round(totalAttendees / data.total_sessions)
+              : 0;
+          const uniqueNames = new Set();
+          data.sessions.forEach((sess) =>
+            sess.attendees.forEach((a) => uniqueNames.add(a.name)),
+          );
+
+          let html = "";
+
+          // Period pills + custom date range
+          html += `<div class="mtg-period-pills" style="flex-wrap:wrap;align-items:center">
+            ${["week", "month", "year", "all"]
+              .map(
+                (p) =>
+                  `<button class="mtg-pill${_mtgDetailPeriod === p ? " active" : ""}" onclick="_mtgDetailPeriod='${p}';_mtgCustomStart=null;_mtgCustomEnd=null;_loadMeetingDetail()">${p === "week" ? "This Week" : p === "month" ? "This Month" : p === "year" ? "This Year" : "All Time"}</button>`,
+              )
+              .join("")}
+            <button class="mtg-pill${_mtgDetailPeriod === "custom" ? " active" : ""}" onclick="document.getElementById('mtgDateRange').style.display=document.getElementById('mtgDateRange').style.display==='flex'?'none':'flex'">Custom Range</button>
+            <div id="mtgDateRange" class="mtg-date-range" style="display:${_mtgDetailPeriod === "custom" ? "flex" : "none"}">
+              <label>From</label>
+              <input type="date" id="mtgStartDate" value="${_mtgCustomStart || ""}" onchange="_mtgCustomStart=this.value">
+              <label>To</label>
+              <input type="date" id="mtgEndDate" value="${_mtgCustomEnd || ""}" onchange="_mtgCustomEnd=this.value">
+              <button class="mtg-pill" onclick="_applyCustomDateRange()" style="background:var(--blue);color:#fff;border-color:var(--blue)">Apply</button>
+            </div>
+          </div>`;
+
+          // Stats row
+          html += `<div class="mtg-stats-row">
+            <div class="mtg-stat-card">
+              <div class="val">${data.total_sessions}</div>
+              <div class="lbl">Sessions</div>
+            </div>
+            <div class="mtg-stat-card">
+              <div class="val">${uniqueNames.size}</div>
+              <div class="lbl">Unique People</div>
+            </div>
+            <div class="mtg-stat-card">
+              <div class="val">${avgPerSession}</div>
+              <div class="lbl">Avg / Session</div>
+            </div>
+            <div class="mtg-stat-card">
+              <div class="val">${totalAttendees}</div>
+              <div class="lbl">Total Records</div>
+            </div>
+          </div>`;
+
+          // Tabs: Overview | Sessions | Members
+          html += `<div class="mtg-tabs">
+            <button class="mtg-tab active" id="mtgTabOverview" onclick="_switchMtgTab('overview')">Overview</button>
+            <button class="mtg-tab" id="mtgTabSessions" onclick="_switchMtgTab('sessions')">Sessions (${data.total_sessions})</button>
+            <button class="mtg-tab" id="mtgTabMembers" onclick="_switchMtgTab('members')">Members (${data.member_stats.length})</button>
+          </div>`;
+
+          // ==== OVERVIEW TAB ====
+          html += '<div id="mtgPaneOverview">';
+          // Attendance trend chart
+          if (data.chart_data.length > 1) {
+            html += `<div class="mtg-chart-wrap">
+              <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+                <h4 style="margin:0">Attendance Trend</h4>
+                <div style="display:flex;gap:6px;align-items:center">
+                  <div class="chart-controls" style="margin:0">
+                    <button class="chart-toggle active" id="toggleTotal" onclick="_toggleChartDataset(0,this)"><span class="dot" style="background:${m.color || "#3b82f6"}"></span>Total</button>
+                    <button class="chart-toggle active" id="toggleMembers" onclick="_toggleChartDataset(1,this)"><span class="dot" style="background:#25d366"></span>Members</button>
+                    <button class="chart-toggle active" id="toggleVisitors" onclick="_toggleChartDataset(2,this)"><span class="dot" style="background:#ff9f0a"></span>Visitors</button>
+                  </div>
+                  <div style="border-left:1px solid var(--border);height:20px;margin:0 4px"></div>
+                  <div class="chart-controls" style="margin:0">
+                    <button class="chart-type-btn active" onclick="_switchChartType('line',this)">Line</button>
+                    <button class="chart-type-btn" onclick="_switchChartType('bar',this)">Bar</button>
+                    <button class="chart-type-btn" onclick="_switchChartType('area',this)">Area</button>
+                  </div>
+                </div>
               </div>
-              <div style="text-align:center;padding:14px;background:var(--bg2);border-radius:12px">
-                <div style="font-size:22px;font-weight:700">${stats.unique_members}</div>
-                <div style="font-size:11px;color:var(--fg3)">Members</div>
-              </div>
-              <div style="text-align:center;padding:14px;background:var(--bg2);border-radius:12px">
-                <div style="font-size:22px;font-weight:700">${stats.avg_per_session}</div>
-                <div style="font-size:11px;color:var(--fg3)">Avg / Session</div>
-              </div>
-              <div style="text-align:center;padding:14px;background:var(--bg2);border-radius:12px">
-                <div style="font-size:22px;font-weight:700">${stats.new_members}</div>
-                <div style="font-size:11px;color:var(--fg3)">New Members</div>
+              <div style="position:relative;height:240px">
+                <canvas id="mtgTrendChart"></canvas>
               </div>
             </div>`;
-
-          if (history.sessions.length === 0) {
-            html +=
-              '<div style="text-align:center;padding:32px;color:var(--fg3)">No attendance sessions recorded yet.</div>';
+            // Stacked bar chart for session comparison
+            html += `<div class="mtg-chart-wrap">
+              <h4>Session Comparison</h4>
+              <div style="position:relative;height:200px">
+                <canvas id="mtgBarChart"></canvas>
+              </div>
+            </div>`;
+          } else if (data.chart_data.length === 1) {
+            html += `<div class="mtg-chart-wrap">
+              <h4>Attendance Trend</h4>
+              <div style="text-align:center;padding:20px;color:var(--fg3);font-size:13px">Only 1 session recorded. Trends will appear after more sessions.</div>
+            </div>`;
           } else {
-            html +=
-              '<h3 style="margin-bottom:12px;font-size:14px">Session History</h3>';
-            history.sessions.forEach((s) => {
-              const dateLabel = new Date(
-                s.date + "T12:00:00",
-              ).toLocaleDateString("en-US", {
-                weekday: "long",
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              });
-              html += `<div style="margin-bottom:14px;border:1px solid var(--border);border-radius:12px;overflow:hidden">
-                <div style="padding:12px 16px;background:var(--bg2);display:flex;justify-content:space-between;align-items:center">
-                  <div style="font-weight:600;font-size:13px">${dateLabel}</div>
-                  <div style="font-size:12px;color:var(--fg3)">${s.members} member${s.members !== 1 ? "s" : ""}${s.new_members > 0 ? ` · ${s.new_members} new` : ""}</div>
+            html += `<div class="mtg-chart-wrap">
+              <h4>Attendance Trend</h4>
+              <div style="text-align:center;padding:30px;color:var(--fg3);font-size:13px">No attendance data yet. Start taking attendance to see graphs here.</div>
+            </div>`;
+          }
+
+          // Top attendees mini-table + doughnut chart
+          if (data.member_stats.length > 0) {
+            // Compute totals for doughnut
+            const totalMembers = data.chart_data.reduce(
+              (s, d) => s + d.members,
+              0,
+            );
+            const totalVisitors = data.chart_data.reduce(
+              (s, d) => s + d.visitors,
+              0,
+            );
+
+            html += `<div style="display:grid;grid-template-columns:${totalMembers + totalVisitors > 0 ? "1fr 240px" : "1fr"};gap:16px;margin-bottom:16px">`;
+            html += `<div class="mtg-chart-wrap" style="margin-bottom:0">
+              <h4>Top Attendees</h4>
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px">
+                ${data.member_stats
+                  .slice(0, 12)
+                  .map((ms, i) => {
+                    const color =
+                      ms.attendance_rate >= 80
+                        ? "var(--green)"
+                        : ms.attendance_rate >= 50
+                          ? "var(--orange)"
+                          : "var(--red)";
+                    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--bg)">
+                    <span style="font-size:14px;font-weight:700;color:var(--fg3);width:20px">${i + 1}</span>
+                    <div style="flex:1;min-width:0">
+                      <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(ms.name)}</div>
+                      <div style="font-size:10px;color:var(--fg3)">${ms.sessions_attended}/${ms.total_sessions} sessions</div>
+                    </div>
+                    <span style="font-size:12px;font-weight:700;color:${color}">${ms.attendance_rate}%</span>
+                  </div>`;
+                  })
+                  .join("")}
+              </div>
+            </div>`;
+            if (totalMembers + totalVisitors > 0) {
+              html += `<div class="mtg-chart-wrap" style="margin-bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+                <h4 style="align-self:flex-start">Breakdown</h4>
+                <div style="position:relative;width:160px;height:160px">
+                  <canvas id="mtgDoughnutChart"></canvas>
                 </div>
-                <div style="padding:8px 16px;display:flex;flex-wrap:wrap;gap:8px">
-                  ${s.attendees
-                    .map((a) => {
-                      const ph = a.profile_photo
-                        ? `<img src="${a.profile_photo}" style="width:24px;height:24px;border-radius:50%;object-fit:cover">`
-                        : `<div class="avatar" style="width:24px;height:24px;font-size:10px">${a.name.charAt(0).toUpperCase()}</div>`;
-                      const badge =
-                        a.member_type === "new_member"
-                          ? ' style="color:var(--orange)"'
-                          : "";
-                      return `<div style="display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;background:var(--bg2);font-size:12px">${ph}<span${badge}>${esc(a.name)}</span></div>`;
-                    })
-                    .join("")}
+                <div style="margin-top:10px;display:flex;gap:16px;font-size:11px">
+                  <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#25d366;margin-right:4px"></span>Members (${totalMembers})</span>
+                  <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ff9f0a;margin-right:4px"></span>Visitors (${totalVisitors})</span>
                 </div>
               </div>`;
+            }
+            html += `</div>`;
+          }
+
+          // Latest 3 sessions preview
+          if (data.sessions.length > 0) {
+            html +=
+              '<h4 style="font-size:13px;font-weight:600;margin-bottom:12px">Recent Sessions</h4>';
+            data.sessions.slice(0, 3).forEach((sess) => {
+              html += _renderSessionBlock(sess, true);
+            });
+            if (data.sessions.length > 3) {
+              html += `<div style="text-align:center;padding:8px"><button class="mtg-pill" onclick="_switchMtgTab('sessions')" style="border:none;color:var(--blue);cursor:pointer">View all ${data.sessions.length} sessions →</button></div>`;
+            }
+          } else {
+            html +=
+              '<div style="text-align:center;padding:40px;color:var(--fg3)">No attendance sessions recorded yet for this period.</div>';
+          }
+          html += "</div>";
+
+          // ==== SESSIONS TAB ====
+          html += '<div id="mtgPaneSessions" style="display:none">';
+          if (data.sessions.length === 0) {
+            html +=
+              '<div style="text-align:center;padding:40px;color:var(--fg3)">No sessions for this period.</div>';
+          } else {
+            data.sessions.forEach((sess) => {
+              html += _renderSessionBlock(sess, false);
             });
           }
+          html += "</div>";
+
+          // ==== MEMBERS TAB ====
+          html += '<div id="mtgPaneMembers" style="display:none">';
+          if (data.member_stats.length === 0) {
+            html +=
+              '<div style="text-align:center;padding:40px;color:var(--fg3)">No member data yet.</div>';
+          } else {
+            html += `<div style="border:1px solid var(--border-light);border-radius:14px;overflow:hidden">
+              <table class="mtg-member-stats-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Name</th>
+                    <th>Sessions</th>
+                    <th>Attendance Rate</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${data.member_stats
+                    .map((ms, i) => {
+                      const color =
+                        ms.attendance_rate >= 80
+                          ? "var(--green)"
+                          : ms.attendance_rate >= 50
+                            ? "var(--orange)"
+                            : "var(--red)";
+                      return `<tr>
+                      <td style="font-weight:600;color:var(--fg3)">${i + 1}</td>
+                      <td style="font-weight:500">${esc(ms.name)}</td>
+                      <td>${ms.sessions_attended} / ${ms.total_sessions}</td>
+                      <td>
+                        <div class="mtg-rate-bar">
+                          <div class="mtg-rate-track">
+                            <div class="mtg-rate-fill" style="width:${ms.attendance_rate}%;background:${color}"></div>
+                          </div>
+                          <span class="mtg-rate-pct" style="color:${color}">${ms.attendance_rate}%</span>
+                        </div>
+                      </td>
+                    </tr>`;
+                    })
+                    .join("")}
+                </tbody>
+              </table>
+            </div>`;
+          }
+          html += "</div>";
+
           content.innerHTML = html;
+
+          // Render charts if data available
+          if (data.chart_data.length > 1) {
+            _renderMtgChart(data.chart_data, m.color || "#3b82f6", "line");
+            _renderMtgBarChart(data.chart_data, m.color || "#3b82f6");
+          }
+          // Render doughnut
+          const totalM = data.chart_data.reduce((s, d) => s + d.members, 0);
+          const totalV = data.chart_data.reduce((s, d) => s + d.visitors, 0);
+          if (totalM + totalV > 0) {
+            _renderMtgDoughnut(totalM, totalV);
+          }
         } catch (ex) {
-          content.innerHTML = `<div style="color:var(--red);padding:20px">Failed to load meeting details: ${esc(ex.message)}</div>`;
+          content.innerHTML = `<div style="color:var(--red);padding:20px;text-align:center">Failed to load meeting details: ${esc(ex.message)}</div>`;
+        }
+      }
+
+      function _renderSessionBlock(sess, collapsed) {
+        const dateLabel = new Date(sess.date + "T12:00:00").toLocaleDateString(
+          "en-US",
+          {
+            weekday: "long",
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          },
+        );
+        const total = sess.members + sess.visitors;
+        const blockId = "sess_" + sess.date.replace(/-/g, "");
+        return `<div class="mtg-session-block">
+          <div class="mtg-session-header${collapsed ? "" : " expanded"}" onclick="document.getElementById('${blockId}').style.display = document.getElementById('${blockId}').style.display==='none'?'table':'none'; this.classList.toggle('expanded')">
+            <div>
+              <span class="date-label">${dateLabel}</span>
+            </div>
+            <div class="meta">
+              <span>${total} attendee${total !== 1 ? "s" : ""}</span>
+              ${sess.visitors > 0 ? `<span style="color:var(--orange)">${sess.visitors} visitor${sess.visitors !== 1 ? "s" : ""}</span>` : ""}
+              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </div>
+          <table class="mtg-session-table" id="${blockId}" style="display:${collapsed ? "none" : "table"}">
+            <thead>
+              <tr>
+                <th style="width:40px">#</th>
+                <th>Name</th>
+                <th>Time</th>
+                <th>Type</th>
+                <th style="width:40px"></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${sess.attendees
+                .map((a, i) => {
+                  const ph = a.profile_photo
+                    ? `<img src="${a.profile_photo}" style="width:28px;height:28px;border-radius:50%;object-fit:cover">`
+                    : `<div class="avatar" style="width:28px;height:28px;font-size:11px">${(a.name || "?").charAt(0).toUpperCase()}</div>`;
+                  const typeClass = (a.member_type || "member").replace(
+                    " ",
+                    "_",
+                  );
+                  return `<tr id="att-row-${a.id}">
+                  <td style="color:var(--fg3);font-weight:500">${i + 1}</td>
+                  <td><div class="name-cell">${ph}<span>${esc(a.name)}</span></div></td>
+                  <td style="color:var(--fg2)">${a.time || "—"}</td>
+                  <td><span class="type-badge ${typeClass}">${(a.member_type || "member").replace("_", " ")}</span></td>
+                  <td>
+                    <button onclick="deleteAttendeeRecord(${a.id})" title="Remove attendee" style="background:none;border:none;cursor:pointer;padding:4px;border-radius:6px;color:var(--fg3);transition:all .2s" onmouseover="this.style.color='var(--red)';this.style.background='var(--red-light,rgba(239,68,68,.1))'" onmouseout="this.style.color='var(--fg3)';this.style.background='none'">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    </button>
+                  </td>
+                </tr>`;
+                })
+                .join("")}
+            </tbody>
+          </table>
+        </div>`;
+      }
+
+      function _renderMtgChart(chartData, color, chartType) {
+        const canvas = document.getElementById("mtgTrendChart");
+        if (!canvas) return;
+        if (_mtgChart) {
+          _mtgChart.destroy();
+          _mtgChart = null;
+        }
+        _mtgLastChartData = chartData;
+        _mtgLastColor = color;
+        const type = chartType || "line";
+        const isArea = type === "area";
+        const renderType = isArea ? "line" : type;
+
+        const labels = chartData.map((d) => {
+          const dt = new Date(d.date + "T12:00:00");
+          return dt.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          });
+        });
+        const counts = chartData.map((d) => d.count);
+        const members = chartData.map((d) => d.members);
+        const visitors = chartData.map((d) => d.visitors);
+
+        const datasets = [
+          {
+            label: "Total",
+            data: counts,
+            borderColor: color,
+            backgroundColor: renderType === "bar" ? color + "80" : color + "20",
+            fill: renderType === "line" ? isArea : false,
+            tension: 0.35,
+            borderWidth: 2.5,
+            pointRadius: renderType === "line" ? 4 : 0,
+            pointBackgroundColor: "#fff",
+            pointBorderColor: color,
+            pointBorderWidth: 2,
+            borderRadius: renderType === "bar" ? 6 : 0,
+          },
+          {
+            label: "Members",
+            data: members,
+            borderColor: "#25d366",
+            backgroundColor: renderType === "bar" ? "#25d36680" : "#25d36620",
+            borderWidth: renderType === "bar" ? 1 : 1.5,
+            borderDash: renderType === "line" && !isArea ? [4, 3] : [],
+            tension: 0.35,
+            pointRadius: 0,
+            fill: isArea,
+            borderRadius: renderType === "bar" ? 6 : 0,
+          },
+          {
+            label: "Visitors",
+            data: visitors,
+            borderColor: "#ff9f0a",
+            backgroundColor: renderType === "bar" ? "#ff9f0a80" : "#ff9f0a20",
+            borderWidth: renderType === "bar" ? 1 : 1.5,
+            borderDash: renderType === "line" && !isArea ? [4, 3] : [],
+            tension: 0.35,
+            pointRadius: 0,
+            fill: isArea,
+            borderRadius: renderType === "bar" ? 6 : 0,
+          },
+        ];
+
+        _mtgChart = new Chart(canvas.getContext("2d"), {
+          type: renderType,
+          data: { labels, datasets },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { intersect: false, mode: "index" },
+            plugins: {
+              legend: {
+                display: true,
+                position: "top",
+                labels: { boxWidth: 12, font: { size: 11 } },
+              },
+              tooltip: {
+                backgroundColor: "rgba(0,0,0,0.8)",
+                titleFont: { size: 12 },
+                bodyFont: { size: 11 },
+                padding: 10,
+                cornerRadius: 8,
+              },
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { font: { size: 10 }, maxRotation: 45 },
+              },
+              y: {
+                beginAtZero: true,
+                grid: { color: "rgba(0,0,0,0.04)" },
+                ticks: { font: { size: 10 }, stepSize: 1 },
+              },
+            },
+          },
+        });
+      }
+
+      let _mtgBarChart = null;
+      let _mtgDoughnut = null;
+
+      function _renderMtgDoughnut(totalMembers, totalVisitors) {
+        const canvas = document.getElementById("mtgDoughnutChart");
+        if (!canvas) return;
+        if (_mtgDoughnut) {
+          _mtgDoughnut.destroy();
+          _mtgDoughnut = null;
+        }
+        _mtgDoughnut = new Chart(canvas.getContext("2d"), {
+          type: "doughnut",
+          data: {
+            labels: ["Members", "Visitors"],
+            datasets: [
+              {
+                data: [totalMembers, totalVisitors],
+                backgroundColor: ["#25d36680", "#ff9f0a80"],
+                borderColor: ["#25d366", "#ff9f0a"],
+                borderWidth: 2,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: "60%",
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: "rgba(0,0,0,0.8)",
+                cornerRadius: 8,
+              },
+            },
+          },
+        });
+      }
+
+      function _renderMtgBarChart(chartData, color) {
+        const canvas = document.getElementById("mtgBarChart");
+        if (!canvas) return;
+        if (_mtgBarChart) {
+          _mtgBarChart.destroy();
+          _mtgBarChart = null;
+        }
+
+        const labels = chartData.map((d) => {
+          const dt = new Date(d.date + "T12:00:00");
+          return dt.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          });
+        });
+
+        _mtgBarChart = new Chart(canvas.getContext("2d"), {
+          type: "bar",
+          data: {
+            labels,
+            datasets: [
+              {
+                label: "Members",
+                data: chartData.map((d) => d.members),
+                backgroundColor: "#25d36680",
+                borderColor: "#25d366",
+                borderWidth: 1,
+                borderRadius: 6,
+              },
+              {
+                label: "Visitors",
+                data: chartData.map((d) => d.visitors),
+                backgroundColor: "#ff9f0a80",
+                borderColor: "#ff9f0a",
+                borderWidth: 1,
+                borderRadius: 6,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { intersect: false, mode: "index" },
+            plugins: {
+              legend: {
+                display: true,
+                position: "top",
+                labels: { boxWidth: 12, font: { size: 11 } },
+              },
+              tooltip: {
+                backgroundColor: "rgba(0,0,0,0.8)",
+                cornerRadius: 8,
+              },
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { font: { size: 10 }, maxRotation: 45 },
+                stacked: true,
+              },
+              y: {
+                beginAtZero: true,
+                grid: { color: "rgba(0,0,0,0.04)" },
+                ticks: { font: { size: 10 }, stepSize: 1 },
+                stacked: true,
+              },
+            },
+          },
+        });
+      }
+
+      function _switchMtgTab(tab) {
+        ["overview", "sessions", "members"].forEach((t) => {
+          const btn = document.getElementById(
+            "mtgTab" + t.charAt(0).toUpperCase() + t.slice(1),
+          );
+          const pane = document.getElementById(
+            "mtgPane" + t.charAt(0).toUpperCase() + t.slice(1),
+          );
+          if (btn) btn.classList.toggle("active", t === tab);
+          if (pane) pane.style.display = t === tab ? "block" : "none";
+        });
+      }
+
+      async function exportMeetingCSV() {
+        if (!_mtgDetailId) return;
+        try {
+          const res = await fetch(`/api/meetings/${_mtgDetailId}/export`, {
+            headers: authHeaders(),
+          });
+          if (!res.ok) throw new Error("Export failed");
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download =
+            res.headers.get("content-disposition")?.split("filename=")[1] ||
+            "attendance_export.csv";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+          showToast("CSV downloaded", "success");
+        } catch (e) {
+          showToast("Failed to export: " + (e.message || ""), "error");
         }
       }
 
       function closeMeetingDetail() {
         document.getElementById("meetingDetailModal").style.display = "none";
+        if (_mtgChart) {
+          _mtgChart.destroy();
+          _mtgChart = null;
+        }
+        if (_mtgBarChart) {
+          _mtgBarChart.destroy();
+          _mtgBarChart = null;
+        }
+        if (_mtgDoughnut) {
+          _mtgDoughnut.destroy();
+          _mtgDoughnut = null;
+        }
+        _mtgDetailId = null;
+      }
+
+      /* ---- Add Members to Meeting modal ---- */
+      let _mtgAddSelectedIds = [];
+      let _mtgAddMembersList = [];
+
+      async function openMtgAddMembers() {
+        if (!_mtgDetailId) return;
+        _mtgAddSelectedIds = [];
+        try {
+          const data = await apiGet("/members");
+          _mtgAddMembersList = data.members || [];
+        } catch {
+          _mtgAddMembersList = [];
+        }
+
+        const overlay = document.createElement("div");
+        overlay.id = "mtgAddMembersOverlay";
+        overlay.style.cssText =
+          "position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1100;display:flex;align-items:center;justify-content:center";
+        overlay.innerHTML = `<div style="background:var(--bg);border-radius:16px;width:460px;max-width:92vw;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+          <div style="padding:20px 24px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+            <h3 style="margin:0;font-size:16px">Add Members to Meeting</h3>
+            <button onclick="document.getElementById('mtgAddMembersOverlay').remove()" style="background:none;border:none;cursor:pointer;color:var(--fg3);font-size:20px">&times;</button>
+          </div>
+          <div style="padding:12px 24px 0">
+            <input type="text" id="mtgAddSearch" placeholder="Search members..." oninput="_filterMtgAddMembers(this.value)" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2)">
+          </div>
+          <div style="padding:8px 24px;display:flex;flex-wrap:wrap;gap:4px;min-height:24px" id="mtgAddSelected"></div>
+          <div id="mtgAddList" style="flex:1;overflow-y:auto;padding:0 24px 12px;max-height:320px"></div>
+          <div style="padding:12px 24px 20px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end">
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('mtgAddMembersOverlay').remove()">Cancel</button>
+            <button class="btn btn-green btn-sm" id="mtgAddSubmitBtn" onclick="submitMtgAddMembers()">Add Selected (0)</button>
+          </div>
+        </div>`;
+        document.body.appendChild(overlay);
+        overlay.addEventListener("click", (e) => {
+          if (e.target === overlay) overlay.remove();
+        });
+        _renderMtgAddList(_mtgAddMembersList);
+      }
+
+      function _renderMtgAddList(list) {
+        const el = document.getElementById("mtgAddList");
+        if (!list.length) {
+          el.innerHTML =
+            '<div style="padding:20px;text-align:center;color:var(--fg3);font-size:13px">No members found</div>';
+          return;
+        }
+        el.innerHTML = list
+          .map((m) => {
+            const checked = _mtgAddSelectedIds.includes(m.id) ? "checked" : "";
+            const photo = m.profile_photo
+              ? `<img src="${m.profile_photo}" style="width:32px;height:32px;border-radius:50%;object-fit:cover">`
+              : `<div style="width:32px;height:32px;border-radius:50%;background:var(--blue-light);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600">${m.name.charAt(0).toUpperCase()}</div>`;
+            return `<label style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer">
+            <input type="checkbox" ${checked} onchange="_toggleMtgAddMember(${m.id})">
+            ${photo}
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:500">${esc(m.name)}</div>
+              <div style="font-size:11px;color:var(--fg3)">${m.email || m.phone || ""}</div>
+            </div>
+          </label>`;
+          })
+          .join("");
+      }
+
+      function _filterMtgAddMembers(q) {
+        const lower = q.toLowerCase();
+        const filtered = _mtgAddMembersList.filter(
+          (m) =>
+            m.name.toLowerCase().includes(lower) ||
+            (m.email && m.email.toLowerCase().includes(lower)),
+        );
+        _renderMtgAddList(filtered);
+      }
+
+      function _toggleMtgAddMember(id) {
+        const idx = _mtgAddSelectedIds.indexOf(id);
+        if (idx >= 0) _mtgAddSelectedIds.splice(idx, 1);
+        else _mtgAddSelectedIds.push(id);
+        // Update selected chips
+        const selEl = document.getElementById("mtgAddSelected");
+        selEl.innerHTML = _mtgAddSelectedIds
+          .map((sid) => {
+            const m = _mtgAddMembersList.find((x) => x.id === sid);
+            return m
+              ? `<span style="display:inline-flex;align-items:center;gap:3px;background:var(--blue-light);color:var(--blue);padding:3px 8px;border-radius:12px;font-size:11px;font-weight:500">${esc(m.name)}<span style="cursor:pointer;font-size:13px" onclick="_toggleMtgAddMember(${sid})">&times;</span></span>`
+              : "";
+          })
+          .join("");
+        document.getElementById("mtgAddSubmitBtn").textContent =
+          `Add Selected (${_mtgAddSelectedIds.length})`;
+        // Re-render list to update checkboxes
+        const q = document.getElementById("mtgAddSearch")?.value || "";
+        _filterMtgAddMembers(q);
+      }
+
+      async function submitMtgAddMembers() {
+        if (!_mtgAddSelectedIds.length) {
+          showToast("Select at least one member", "error");
+          return;
+        }
+        try {
+          const data = await apiPost("/attendance/manual", {
+            member_ids: _mtgAddSelectedIds,
+            meeting_id: _mtgDetailId,
+            branch_id: BRANCH.id || null,
+          });
+          let msg = `${data.total_marked} member(s) added.`;
+          if (data.already_marked.length)
+            msg += ` ${data.already_marked.length} already marked.`;
+          showToast(msg, "success");
+          document.getElementById("mtgAddMembersOverlay")?.remove();
+          await _loadMeetingDetail();
+        } catch (err) {
+          showToast(err.message || "Failed to add members", "error");
+        }
       }
 
       // Populate meeting selectors in Take Attendance, Records filter
       async function refreshMeetingSelectors() {
         try {
           const data = await apiGet("/meetings");
-          const selectors = [
-            document.getElementById("recMeetingSelect"),
-            document.getElementById("filterMeeting"),
-          ];
-          selectors.forEach((sel) => {
-            if (!sel) return;
-            const current = sel.value;
-            const firstOpt = sel.options[0].outerHTML; // keep the "All" / "General" option
-            sel.innerHTML = firstOpt;
-            data.meetings.forEach((m) => {
+          const todayDow = new Date().getDay(); // JS: 0=Sun, 1=Mon ... 6=Sat
+          // Convert to Python convention: 0=Mon ... 6=Sun
+          const pyDow = todayDow === 0 ? 6 : todayDow - 1;
+
+          const allMeetings = data.meetings || [];
+
+          // Helper: check if a meeting is scheduled for today
+          function isTodayMeeting(m) {
+            if (!m.is_active) return false;
+            if (m.recurrence === "daily") return true;
+            if (m.recurrence === "weekly" || m.recurrence === "biweekly") {
+              return m.day_of_week === pyDow;
+            }
+            if (m.recurrence === "monthly") {
+              return m.day_of_month === new Date().getDate();
+            }
+            if (m.recurrence === "once") {
+              // "once" meetings: show if next_occurrence is today
+              if (m.next_occurrence) {
+                const today = new Date().toISOString().slice(0, 10);
+                return m.next_occurrence === today;
+              }
+            }
+            return true; // unknown recurrence → show as fallback
+          }
+
+          // Records filter: show ALL meetings (no filtering)
+          const filterSel = document.getElementById("filterMeeting");
+          if (filterSel) {
+            const current = filterSel.value;
+            const firstOpt = filterSel.options[0].outerHTML;
+            filterSel.innerHTML = firstOpt;
+            allMeetings.forEach((m) => {
               const opt = document.createElement("option");
               opt.value = m.id;
               opt.textContent = m.name;
-              sel.appendChild(opt);
+              filterSel.appendChild(opt);
             });
-            sel.value = current; // restore selection
-          });
-          // Update badge in take attendance
+            filterSel.value = current;
+          }
+
+          // Recognize meeting selector: show all meetings, auto-select today's
           const recSel = document.getElementById("recMeetingSelect");
-          const badge = document.getElementById("recMeetingBadge");
-          recSel.addEventListener("change", () => {
-            const opt = recSel.options[recSel.selectedIndex];
+          if (recSel) {
+            const prevVal = recSel.value;
+            const firstOpt = recSel.options[0].outerHTML;
+            recSel.innerHTML = firstOpt;
+            const todayMeetings = allMeetings.filter(isTodayMeeting);
+            const otherMeetings = allMeetings.filter(
+              (m) => m.is_active && !isTodayMeeting(m),
+            );
+            // Today's meetings first
+            todayMeetings.forEach((m) => {
+              const opt = document.createElement("option");
+              opt.value = m.id;
+              opt.textContent =
+                "\u2605 " +
+                m.name +
+                (m.start_time ? ` (${m.start_time})` : "") +
+                " — Today";
+              recSel.appendChild(opt);
+            });
+            // Then other active meetings
+            if (otherMeetings.length > 0 && todayMeetings.length > 0) {
+              const sep = document.createElement("option");
+              sep.disabled = true;
+              sep.textContent =
+                "\u2500\u2500\u2500 Other meetings \u2500\u2500\u2500";
+              recSel.appendChild(sep);
+            }
+            otherMeetings.forEach((m) => {
+              const opt = document.createElement("option");
+              opt.value = m.id;
+              opt.textContent =
+                m.name +
+                (m.day_of_week_name ? ` (${m.day_of_week_name})` : "") +
+                (m.start_time ? ` ${m.start_time}` : "");
+              recSel.appendChild(opt);
+            });
+            // Auto-select: prefer previous value, then today's meeting
+            if (
+              prevVal &&
+              [...recSel.options].some((o) => o.value === prevVal)
+            ) {
+              recSel.value = prevVal;
+            } else if (todayMeetings.length === 1) {
+              recSel.value = todayMeetings[0].id;
+            } else if (todayMeetings.length > 1) {
+              // Pick the one closest to current time
+              const now = new Date();
+              const nowMin = now.getHours() * 60 + now.getMinutes();
+              let bestId = todayMeetings[0].id;
+              let bestDiff = Infinity;
+              todayMeetings.forEach((m) => {
+                if (m.start_time) {
+                  const [hh, mm] = m.start_time.split(":").map(Number);
+                  const diff = Math.abs(hh * 60 + mm - nowMin);
+                  if (diff < bestDiff) {
+                    bestDiff = diff;
+                    bestId = m.id;
+                  }
+                }
+              });
+              recSel.value = bestId;
+            }
+            // Update badge
+            const badge = document.getElementById("recMeetingBadge");
             if (recSel.value) {
               badge.style.display = "inline-block";
-              badge.textContent = opt.textContent;
+              badge.textContent =
+                recSel.options[recSel.selectedIndex].textContent;
             } else {
               badge.style.display = "none";
             }
-          });
+            recSel.addEventListener("change", () => {
+              const opt = recSel.options[recSel.selectedIndex];
+              if (recSel.value) {
+                badge.style.display = "inline-block";
+                badge.textContent = opt.textContent;
+              } else {
+                badge.style.display = "none";
+              }
+            });
+          }
         } catch {}
+      }
+
+      // ==================== ANALYTICS ====================
+      let _anCharts = {};
+
+      function switchAnTab(tab) {
+        document
+          .querySelectorAll(".an-tab")
+          .forEach((t) => t.classList.remove("active"));
+        document
+          .querySelectorAll(".an-tab-content")
+          .forEach((t) => t.classList.remove("active"));
+        event.target.classList.add("active");
+        document.getElementById("anTab-" + tab).classList.add("active");
+      }
+
+      async function loadAnalytics() {
+        const days = parseInt(document.getElementById("anPeriod").value) || 30;
+        const branchId = document.getElementById("anBranch").value;
+        const bq = branchId ? `&branch_id=${branchId}` : "";
+
+        // Populate branch selector on first load
+        try {
+          const sel = document.getElementById("anBranch");
+          if (sel.options.length <= 1) {
+            const branches = await apiGet("/branches/");
+            branches.forEach((b) => {
+              const o = document.createElement("option");
+              o.value = b.id;
+              o.textContent = b.name;
+              sel.appendChild(o);
+            });
+          }
+        } catch {}
+
+        // Fetch all data in parallel
+        const [
+          overview,
+          daily,
+          meetings,
+          retention,
+          growth,
+          weekly,
+          topAtt,
+          latenessData,
+          branchCmpData,
+        ] = await Promise.all([
+          apiGet(`/analytics/overview?days=${days}`).catch(() => null),
+          apiGet(`/analytics/daily-trends?days=${days}${bq}`).catch(() => null),
+          apiGet(`/analytics/meeting-comparison?days=${days}`).catch(
+            () => null,
+          ),
+          apiGet(
+            `/analytics/member-retention?weeks=${Math.max(4, Math.ceil(days / 7))}`,
+          ).catch(() => null),
+          apiGet(`/analytics/growth-metrics`).catch(() => null),
+          apiGet(
+            `/analytics/weekly-trends?weeks=${Math.max(4, Math.ceil(days / 7))}${bq}`,
+          ).catch(() => null),
+          apiGet(`/analytics/top-attendees?days=${days}&limit=10${bq}`).catch(
+            () => null,
+          ),
+          apiGet(`/analytics/lateness-report?days=${days}`).catch(() => null),
+          apiGet(`/analytics/branches`).catch(() => null),
+        ]);
+
+        // Stats cards
+        if (overview) {
+          document.getElementById("anMembers").textContent =
+            overview.total_members;
+          document.getElementById("anVisitors").textContent =
+            overview.total_visitors;
+          document.getElementById("anAttendance").textContent =
+            overview.total_attendance_records;
+          const g = overview.attendance_growth;
+          const gEl = document.getElementById("anGrowth");
+          gEl.textContent = (g >= 0 ? "+" : "") + g + "%";
+          gEl.style.color = g >= 0 ? "var(--green)" : "var(--red)";
+        }
+
+        // Attendance Trend Indicator
+        const trendCard = document.getElementById("anTrendCard");
+        if (overview && overview.attendance_trend) {
+          const t = overview.attendance_trend;
+          const dir = t.trend_direction;
+          const icon = dir === "up" ? "↑" : dir === "down" ? "↓" : "→";
+          const clr =
+            dir === "up"
+              ? "var(--green)"
+              : dir === "down"
+                ? "var(--red)"
+                : "var(--fg3)";
+          const bg =
+            dir === "up"
+              ? "var(--green-light)"
+              : dir === "down"
+                ? "rgba(255,59,48,.1)"
+                : "var(--bg2)";
+          document.getElementById("anTrendBadge").textContent =
+            icon + " " + Math.abs(t.trend_percentage).toFixed(1) + "%";
+          document.getElementById("anTrendBadge").style.background = bg;
+          document.getElementById("anTrendBadge").style.color = clr;
+          document.getElementById("anTrendText").textContent =
+            "Attendance " +
+            (dir === "up"
+              ? "increased"
+              : dir === "down"
+                ? "decreased"
+                : "stable");
+          document.getElementById("anTrendAvg").textContent =
+            "Avg: " + (t.average_attendance || 0).toFixed(0) + " per service";
+          trendCard.classList.remove("hidden");
+        } else {
+          trendCard.classList.add("hidden");
+        }
+
+        // Destroy old charts
+        Object.values(_anCharts).forEach((c) => {
+          try {
+            c.destroy();
+          } catch {}
+        });
+        _anCharts = {};
+
+        const chartOpts = {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: true,
+              position: "top",
+              labels: { boxWidth: 10, font: { size: 11 } },
+            },
+          },
+        };
+
+        // Daily Trend Chart
+        if (daily && daily.data && daily.data.length) {
+          const ctx = document.getElementById("anDailyChart").getContext("2d");
+          _anCharts.daily = new Chart(ctx, {
+            type: "line",
+            data: {
+              labels: daily.data.map((d) => d.date.slice(5)),
+              datasets: [
+                {
+                  label: "Members",
+                  data: daily.data.map((d) => d.members),
+                  borderColor: "#34c759",
+                  backgroundColor: "rgba(52,199,89,.1)",
+                  fill: true,
+                  tension: 0.3,
+                },
+                {
+                  label: "Visitors",
+                  data: daily.data.map((d) => d.visitors),
+                  borderColor: "#ff9f0a",
+                  backgroundColor: "rgba(255,159,10,.1)",
+                  fill: true,
+                  tension: 0.3,
+                },
+                {
+                  label: "Late",
+                  data: daily.data.map((d) => d.late),
+                  borderColor: "#ff3b30",
+                  borderDash: [4, 4],
+                  fill: false,
+                  tension: 0.3,
+                },
+              ],
+            },
+            options: { ...chartOpts, scales: { y: { beginAtZero: true } } },
+          });
+        }
+
+        // Meeting Comparison Chart
+        if (meetings && meetings.meetings && meetings.meetings.length) {
+          const ctx = document
+            .getElementById("anMeetingChart")
+            .getContext("2d");
+          const colors = [
+            "#007aff",
+            "#34c759",
+            "#ff9f0a",
+            "#ff3b30",
+            "#af52de",
+            "#5ac8fa",
+            "#ff2d55",
+            "#5856d6",
+          ];
+          _anCharts.meeting = new Chart(ctx, {
+            type: "bar",
+            data: {
+              labels: meetings.meetings.map((m) => m.name),
+              datasets: [
+                {
+                  label: "Total",
+                  data: meetings.meetings.map((m) => m.total),
+                  backgroundColor: meetings.meetings.map(
+                    (m, i) => m.color || colors[i % colors.length],
+                  ),
+                },
+                {
+                  label: "Avg/Session",
+                  data: meetings.meetings.map((m) => m.avg_per_session),
+                  backgroundColor: "rgba(136,136,136,.3)",
+                },
+              ],
+            },
+            options: { ...chartOpts, scales: { y: { beginAtZero: true } } },
+          });
+        }
+
+        // Retention Chart
+        if (retention && retention.data && retention.data.length) {
+          const ctx = document
+            .getElementById("anRetentionChart")
+            .getContext("2d");
+          _anCharts.retention = new Chart(ctx, {
+            type: "line",
+            data: {
+              labels: retention.data.map((d) => d.week_start.slice(5)),
+              datasets: [
+                {
+                  label: "Retention %",
+                  data: retention.data.map((d) => d.retention_rate),
+                  borderColor: "#007aff",
+                  backgroundColor: "rgba(0,122,255,.1)",
+                  fill: true,
+                  tension: 0.3,
+                  yAxisID: "y",
+                },
+                {
+                  label: "Active",
+                  data: retention.data.map((d) => d.active_members),
+                  borderColor: "#34c759",
+                  fill: false,
+                  tension: 0.3,
+                  yAxisID: "y1",
+                },
+                {
+                  label: "Churned",
+                  data: retention.data.map((d) => d.churned),
+                  borderColor: "#ff3b30",
+                  fill: false,
+                  tension: 0.3,
+                  yAxisID: "y1",
+                },
+              ],
+            },
+            options: {
+              ...chartOpts,
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  max: 100,
+                  title: { display: true, text: "%" },
+                },
+                y1: {
+                  position: "right",
+                  beginAtZero: true,
+                  grid: { drawOnChartArea: false },
+                },
+              },
+            },
+          });
+        }
+
+        // Growth Chart
+        if (growth && growth.months && growth.months.length) {
+          const ctx = document.getElementById("anGrowthChart").getContext("2d");
+          _anCharts.growth = new Chart(ctx, {
+            type: "bar",
+            data: {
+              labels: growth.months.map((m) =>
+                m.month_name.split(" ")[0].slice(0, 3),
+              ),
+              datasets: [
+                {
+                  label: "Attendance",
+                  data: growth.months.map((m) => m.total_attendance),
+                  backgroundColor: "rgba(0,122,255,.7)",
+                },
+                {
+                  label: "New Members",
+                  data: growth.months.map((m) => m.new_members),
+                  backgroundColor: "rgba(52,199,89,.7)",
+                },
+                {
+                  label: "New Visitors",
+                  data: growth.months.map((m) => m.new_visitors),
+                  backgroundColor: "rgba(255,159,10,.7)",
+                },
+              ],
+            },
+            options: { ...chartOpts, scales: { y: { beginAtZero: true } } },
+          });
+        }
+
+        // Weekly Trends Chart
+        if (weekly && weekly.length) {
+          const ctx = document.getElementById("anWeeklyChart").getContext("2d");
+          _anCharts.weekly = new Chart(ctx, {
+            type: "bar",
+            data: {
+              labels: weekly.map(
+                (w) => w.week_start.slice(5) + " – " + w.week_end.slice(5),
+              ),
+              datasets: [
+                {
+                  label: "Total",
+                  data: weekly.map((w) => w.total_attendance),
+                  backgroundColor: "rgba(0,122,255,.6)",
+                },
+                {
+                  label: "Members",
+                  data: weekly.map((w) => w.unique_members),
+                  backgroundColor: "rgba(52,199,89,.6)",
+                },
+                {
+                  label: "Visitors",
+                  data: weekly.map((w) => w.unique_visitors),
+                  backgroundColor: "rgba(255,159,10,.6)",
+                },
+              ],
+            },
+            options: { ...chartOpts, scales: { y: { beginAtZero: true } } },
+          });
+        }
+
+        // Visitor Insights (pie: returning vs first-time)
+        if (overview) {
+          const ctx = document
+            .getElementById("anVisitorChart")
+            .getContext("2d");
+          const conv = overview.visitor_to_member_conversion || 0;
+          _anCharts.visitor = new Chart(ctx, {
+            type: "doughnut",
+            data: {
+              labels: ["Converted to Member", "Active Visitors", "Late %"],
+              datasets: [
+                {
+                  data: [
+                    conv,
+                    Math.max(0, 100 - conv - (overview.late_percentage || 0)),
+                    overview.late_percentage || 0,
+                  ],
+                  backgroundColor: ["#34c759", "#007aff", "#ff3b30"],
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { position: "bottom", labels: { font: { size: 11 } } },
+              },
+            },
+          });
+        }
+
+        // Top Attendees (with medal badges)
+        const topEl = document.getElementById("anTopAttendees");
+        if (topAtt && topAtt.length) {
+          topEl.innerHTML = topAtt
+            .map((t, i) => {
+              const medalCls =
+                i === 0
+                  ? "gold"
+                  : i === 1
+                    ? "silver"
+                    : i === 2
+                      ? "bronze"
+                      : "default";
+              const rate =
+                typeof t.attendance_rate === "number"
+                  ? t.attendance_rate > 1
+                    ? t.attendance_rate
+                    : (t.attendance_rate * 100).toFixed(0)
+                  : t.attendance_rate;
+              return `
+            <div style="display:flex;align-items:center;gap:12px;padding:10px 0;${i > 0 ? "border-top:1px solid var(--border-light)" : ""}">
+              <div class="medal ${medalCls}">${i + 1}</div>
+              <div class="avatar" style="width:32px;height:32px;font-size:13px">${t.profile_photo ? `<img src="${esc(t.profile_photo)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover">` : t.name.charAt(0).toUpperCase()}</div>
+              <div style="flex:1">
+                <div style="font-size:13px;font-weight:500">${esc(t.name)}</div>
+                <div style="font-size:11px;color:var(--fg3)">${t.attendance_count} attendance${t.late_count ? " · " + t.late_count + " late" : ""}</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div class="progress-bar"><div class="progress-bar-fill" style="width:${rate}%"></div></div>
+                <span style="font-size:12px;font-weight:600;color:var(--fg3);min-width:36px;text-align:right">${rate}%</span>
+              </div>
+            </div>`;
+            })
+            .join("");
+        } else {
+          topEl.innerHTML =
+            '<div style="padding:20px;text-align:center;color:var(--fg3);font-size:13px">No attendance data yet</div>';
+        }
+
+        // Lateness Report Table
+        const latenessEl = document.getElementById("anLatenessBody");
+        const latenessArr =
+          latenessData && latenessData.chronic_latecomers
+            ? latenessData.chronic_latecomers
+            : Array.isArray(latenessData)
+              ? latenessData
+              : [];
+        if (latenessArr.length) {
+          latenessEl.innerHTML = `<table class="an-table">
+            <thead><tr><th>Member</th><th>Present</th><th>Times Late</th><th>Rate</th><th>Avg Late</th></tr></thead>
+            <tbody>${latenessArr
+              .map((r) => {
+                const rate =
+                  r.late_percentage ||
+                  (typeof r.lateness_rate === "number"
+                    ? r.lateness_rate > 1
+                      ? r.lateness_rate
+                      : r.lateness_rate * 100
+                    : 0);
+                const rateCls =
+                  rate > 50 ? "red" : rate > 25 ? "amber" : "green";
+                return `<tr>
+                <td><div style="display:flex;align-items:center;gap:8px">
+                  <div class="avatar" style="width:28px;height:28px;font-size:11px;background:rgba(255,159,10,.12);color:#e08600">${r.name.charAt(0).toUpperCase()}</div>
+                  <span style="font-weight:500">${esc(r.name)}</span>
+                </div></td>
+                <td>${r.total_attendance}</td>
+                <td style="color:#e08600;font-weight:600">${r.late_count}</td>
+                <td><span class="rate-badge ${rateCls}">${typeof rate === "number" ? rate.toFixed(0) : rate}%</span></td>
+                <td style="color:var(--fg3)">${Math.round(r.avg_late_minutes || r.average_late_minutes || 0)} min</td>
+              </tr>`;
+              })
+              .join("")}</tbody></table>`;
+        } else {
+          latenessEl.innerHTML =
+            '<div style="padding:30px;text-align:center;color:var(--fg3);font-size:13px">No lateness data available</div>';
+        }
+
+        // Branch Comparison Cards
+        const branchCmpEl = document.getElementById("anBranchCmpBody");
+        if (branchCmpData && branchCmpData.length > 0) {
+          branchCmpEl.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px">
+            ${branchCmpData
+              .map(
+                (b) => `
+              <div style="background:var(--bg2);border-radius:12px;padding:16px">
+                <div style="font-size:14px;font-weight:600;margin-bottom:10px">${esc(b.branch_name)}</div>
+                <div style="display:flex;flex-direction:column;gap:6px">
+                  <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--fg3)">Members</span><span style="font-weight:600">${b.total_members}</span></div>
+                  <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--fg3)">Total Attendance</span><span style="font-weight:600">${b.total_attendance}</span></div>
+                  <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--fg3)">Avg Attendance</span><span style="font-weight:600">${(b.average_attendance || 0).toFixed(0)}</span></div>
+                  <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--fg3)">Visitors</span><span style="font-weight:600">${b.visitor_count || 0}</span></div>
+                </div>
+              </div>
+            `,
+              )
+              .join("")}
+          </div>`;
+        } else {
+          branchCmpEl.innerHTML =
+            '<div style="padding:30px;text-align:center;color:var(--fg3);font-size:13px">No branch data available</div>';
+        }
+      }
+
+      // ==================== BRANCHES ====================
+      function toggleBranchForm() {
+        const card = document.getElementById("branchFormCard");
+        card.classList.toggle("hidden");
+      }
+
+      async function loadBranches() {
+        const el = document.getElementById("branchesList");
+        el.innerHTML = '<div class="loading">Loading branches...</div>';
+        try {
+          const branches = await apiGet("/branches/");
+          if (!branches.length) {
+            el.innerHTML =
+              '<div class="card" style="padding:40px;text-align:center;color:var(--fg3)"><div style="font-size:32px;margin-bottom:8px">🏢</div><div style="font-size:14px;font-weight:500">No branches yet</div><div style="font-size:12px;margin-top:4px">Create your first branch to organize members by location.</div></div>';
+            return;
+          }
+          el.innerHTML = branches
+            .map(
+              (b) => `
+            <div class="card" style="padding:16px;margin-bottom:10px">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <div style="display:flex;align-items:center;gap:12px">
+                  <div style="width:42px;height:42px;border-radius:12px;background:var(--blue-light);color:var(--blue);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px">${esc(b.code.slice(0, 3))}</div>
+                  <div>
+                    <div style="font-size:14px;font-weight:600">${esc(b.name)} ${b.is_headquarters ? '<span style="font-size:10px;background:var(--green-light);color:var(--green);padding:2px 6px;border-radius:4px;font-weight:600;margin-left:6px">HQ</span>' : ""}</div>
+                    <div style="font-size:12px;color:var(--fg3)">${[b.city, b.country].filter(Boolean).join(", ") || "No location"} &middot; Code: ${esc(b.code)}</div>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:16px">
+                  <div style="text-align:center"><div style="font-size:16px;font-weight:700">${b.member_count}</div><div style="font-size:10px;color:var(--fg3)">Members</div></div>
+                  <div style="text-align:center"><div style="font-size:16px;font-weight:700">${b.meeting_count}</div><div style="font-size:10px;color:var(--fg3)">Meetings</div></div>
+                  <button class="btn btn-outline btn-sm" onclick="deleteBranch(${b.id},'${esc(b.name)}')" style="color:var(--red)">Delete</button>
+                </div>
+              </div>
+            </div>
+          `,
+            )
+            .join("");
+        } catch (err) {
+          el.innerHTML = `<div class="card" style="padding:20px;color:var(--red)">${esc(err.message)}</div>`;
+        }
+      }
+
+      async function submitBranch(e) {
+        e.preventDefault();
+        try {
+          await apiPost("/branches/", {
+            name: document.getElementById("brName").value,
+            code: document.getElementById("brCode").value,
+            city: document.getElementById("brCity").value || null,
+            country: document.getElementById("brCountry").value || null,
+            address: document.getElementById("brAddress").value || null,
+            is_headquarters: document.getElementById("brHQ").checked,
+          });
+          document.getElementById("branchForm").reset();
+          document.getElementById("branchFormCard").classList.add("hidden");
+          showToast("Branch created!", "success");
+          loadBranches();
+          // Refresh local branches list
+          try {
+            const brs = await apiGet("/branches/");
+            BRANCHES = brs.map((b) => ({
+              id: b.id,
+              name: b.name,
+              code: b.code,
+              is_headquarters: b.is_headquarters,
+            }));
+            localStorage.setItem("branches", JSON.stringify(BRANCHES));
+          } catch {}
+        } catch (err) {
+          showToast(err.message, "error");
+        }
+      }
+
+      async function deleteBranch(id, name) {
+        if (!confirm(`Delete branch "${name}"? This cannot be undone.`)) return;
+        try {
+          await apiDel(`/branches/${id}`);
+          showToast("Branch deleted", "success");
+          loadBranches();
+        } catch (err) {
+          showToast(err.message, "error");
+        }
+      }
+
+      // ==================== MANUAL ATTENDANCE ====================
+      let _manualSelectedIds = [];
+      let _manualMembers = [];
+
+      function toggleManualAttendance() {
+        const card = document.getElementById("manualAttCard");
+        card.classList.toggle("hidden");
+        if (!card.classList.contains("hidden")) {
+          // Load members and meetings for selection
+          _loadManualData();
+        }
+      }
+
+      async function _loadManualData() {
+        try {
+          const [membersData, meetingsData] = await Promise.all([
+            apiGet("/members"),
+            apiGet("/meetings"),
+          ]);
+          _manualMembers = membersData.members || [];
+          // Populate meeting selector
+          const sel = document.getElementById("manualMeetingSelect");
+          const curVal = sel.value;
+          sel.innerHTML = '<option value="">General</option>';
+          (meetingsData.meetings || []).forEach((m) => {
+            const o = document.createElement("option");
+            o.value = m.id;
+            o.textContent = m.name;
+            sel.appendChild(o);
+          });
+          sel.value = curVal;
+          // Set default date to today
+          document.getElementById("manualDate").value = new Date()
+            .toISOString()
+            .slice(0, 10);
+        } catch {}
+      }
+
+      function filterManualMembers() {
+        const query = document
+          .getElementById("manualMemberInput")
+          .value.toLowerCase();
+        const dd = document.getElementById("manualMemberDropdown");
+        if (!query) {
+          dd.style.display = "none";
+          return;
+        }
+        const matches = _manualMembers
+          .filter(
+            (m) =>
+              m.name.toLowerCase().includes(query) &&
+              !_manualSelectedIds.includes(m.id),
+          )
+          .slice(0, 10);
+        if (!matches.length) {
+          dd.style.display = "none";
+          return;
+        }
+        dd.innerHTML = matches
+          .map(
+            (m) =>
+              `<div style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border-light)" data-mid="${m.id}" onmousedown="_selectManualMember(${m.id})">${esc(m.name)}</div>`,
+          )
+          .join("");
+        dd.style.display = "block";
+      }
+
+      function _selectManualMember(id, name) {
+        if (_manualSelectedIds.includes(id)) return;
+        _manualSelectedIds.push(id);
+        _renderManualSelected();
+        document.getElementById("manualMemberInput").value = "";
+        document.getElementById("manualMemberDropdown").style.display = "none";
+      }
+
+      function _removeManualMember(id) {
+        _manualSelectedIds = _manualSelectedIds.filter((x) => x !== id);
+        _renderManualSelected();
+      }
+
+      function _renderManualSelected() {
+        const el = document.getElementById("manualSelectedMembers");
+        el.innerHTML = _manualSelectedIds
+          .map((id) => {
+            const m = _manualMembers.find((x) => x.id === id);
+            if (!m) return "";
+            return `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--blue-light);color:var(--blue);padding:4px 10px;border-radius:20px;font-size:12px;font-weight:500">${esc(m.name)}<span style="cursor:pointer;margin-left:2px;font-size:14px" onclick="_removeManualMember(${id})">&times;</span></span>`;
+          })
+          .join("");
+      }
+
+      async function submitManualAttendance() {
+        if (!_manualSelectedIds.length) {
+          showToast("Select at least one member", "error");
+          return;
+        }
+        const resEl = document.getElementById("manualResult");
+        try {
+          const data = await apiPost("/attendance/manual", {
+            member_ids: _manualSelectedIds,
+            meeting_id:
+              document.getElementById("manualMeetingSelect").value || null,
+            date: document.getElementById("manualDate").value || null,
+            branch_id: BRANCH.id || null,
+          });
+          resEl.style.display = "block";
+          resEl.style.background = "var(--green-light)";
+          resEl.style.color = "var(--green)";
+          let msg = `${data.total_marked} marked.`;
+          if (data.already_marked.length)
+            msg += ` ${data.already_marked.length} already marked.`;
+          resEl.textContent = msg;
+          _manualSelectedIds = [];
+          _renderManualSelected();
+          showToast(msg, "success");
+          setTimeout(() => {
+            resEl.style.display = "none";
+          }, 4000);
+        } catch (err) {
+          resEl.style.display = "block";
+          resEl.style.background = "rgba(255,59,48,.1)";
+          resEl.style.color = "var(--red)";
+          resEl.textContent = err.message;
+        }
+      }
+
+      async function submitManualByName() {
+        const nameInput = document.getElementById("manualNameInput");
+        const name = nameInput.value.trim();
+        if (!name) {
+          showToast("Enter a name", "error");
+          return;
+        }
+        const resEl = document.getElementById("manualResult");
+        try {
+          await apiPost("/attendance/manual-name", {
+            name: name,
+            meeting_id:
+              document.getElementById("manualMeetingSelect").value || null,
+            branch_id: BRANCH.id || null,
+          });
+          resEl.style.display = "block";
+          resEl.style.background = "var(--green-light)";
+          resEl.style.color = "var(--green)";
+          resEl.textContent = `Attendance added for "${name}"`;
+          nameInput.value = "";
+          showToast(`Attendance added for "${name}"`, "success");
+          setTimeout(() => {
+            resEl.style.display = "none";
+          }, 4000);
+        } catch (err) {
+          resEl.style.display = "block";
+          resEl.style.background = "rgba(255,59,48,.1)";
+          resEl.style.color = "var(--red)";
+          resEl.textContent = err.message;
+        }
       }
 
       // ==================== INIT ====================
       loadDashboard();
       refreshMeetingSelectors();
+      // Pre-load custom registration fields
+      apiGet("/registration-fields/")
+        .then((d) => {
+          _cachedRegFields = d.fields;
+        })
+        .catch(() => {});
     </script>
   </body>
 </html>

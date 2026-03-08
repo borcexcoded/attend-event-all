@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    root: __dirname,
+  },
   /* In production, /api/* is proxied to the backend (Railway).
      Set NEXT_PUBLIC_API_URL to the backend URL. */
   async rewrites() {

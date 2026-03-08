@@ -11,6 +11,7 @@ from app.database import get_db
 from app.models.visitor import Visitor
 from app.models.user import User
 from app.models.organization import Admin
+from app.models.branch import Branch
 from app.auth import get_current_admin
 
 router = APIRouter(tags=["Visitors"])
@@ -19,12 +20,14 @@ router = APIRouter(tags=["Visitors"])
 @router.get("/visitors")
 def get_visitors(admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
     """Get all visitors / unknown faces for this org."""
-    visitors = (
+    query = (
         db.query(Visitor)
         .filter(Visitor.org_id == admin.org_id)
-        .order_by(Visitor.last_seen.desc())
-        .all()
     )
+    # Branch isolation: non-owners only see visitors from their branch
+    if admin.role != "owner" and admin.branch_id:
+        query = query.filter(Visitor.branch_id == admin.branch_id)
+    visitors = query.order_by(Visitor.last_seen.desc()).all()
     return {
         "total": len(visitors),
         "visitors": [
@@ -67,42 +70,79 @@ def verify_visitor(
     if not v:
         raise HTTPException(status_code=404, detail="Visitor not found")
 
+    # Branch isolation: non-owners can only verify visitors from their assigned branch.
+    if admin.role != "owner" and admin.branch_id:
+        if v.branch_id and v.branch_id != admin.branch_id:
+            raise HTTPException(status_code=404, detail="Visitor not found")
+        if not v.branch_id:
+            v.branch_id = admin.branch_id
+
     if req.action == "new_member":
         v.label = req.label or f"Visitor #{v.id}"
         v.is_new_member = True
         v.verified = True
 
+        # Members created from visitors must keep branch ownership so they appear in
+        # branch-scoped member lists.
+        effective_member_branch_id = v.branch_id
+        if admin.role != "owner" and admin.branch_id:
+            effective_member_branch_id = admin.branch_id
+        elif effective_member_branch_id:
+            branch = db.query(Branch).filter(
+                Branch.id == effective_member_branch_id,
+                Branch.org_id == admin.org_id,
+                Branch.is_active == True,
+            ).first()
+            if not branch:
+                effective_member_branch_id = None
+
         # Check for duplicate face against existing members before creating
         if v.face_embedding:
-            import face_recognition
-            new_enc = np.frombuffer(v.face_embedding, dtype=np.float64)
-            all_users = db.query(User).filter(User.org_id == admin.org_id).all()
-            for u in all_users:
-                existing_enc = np.frombuffer(u.face_embedding, dtype=np.float64)
-                if np.any(existing_enc != 0):
-                    dist = float(face_recognition.face_distance([existing_enc], new_enc)[0])
-                    if dist <= 0.45:
-                        raise HTTPException(
-                            status_code=409,
-                            detail=f"This face closely matches existing member '{u.name}' (similarity: {round((1-dist)*100)}%). "
-                                   f"Cannot register as a different person. Use 'Link to Member' instead, "
-                                   f"or contact admin to override if they are truly different people."
-                        )
+            from app.face_engine import get_engine, decode_embedding, DUPLICATE_REGISTER_THRESHOLD
+            engine = get_engine()
+            new_emb, new_ver = decode_embedding(v.face_embedding)
+            if new_emb is not None and new_ver == "arcface":
+                all_users = db.query(User).filter(User.org_id == admin.org_id).all()
+                for u in all_users:
+                    existing_emb, ex_ver = decode_embedding(u.face_embedding)
+                    if existing_emb is not None and ex_ver == "arcface":
+                        sim = engine.cosine_similarity(existing_emb, new_emb)
+                        if sim >= DUPLICATE_REGISTER_THRESHOLD:
+                            raise HTTPException(
+                                status_code=409,
+                                detail=f"This face closely matches existing member '{u.name}' (similarity: {round(sim*100)}%). "
+                                       f"Cannot register as a different person. Use 'Link to Member' instead, "
+                                       f"or contact admin to override if they are truly different people."
+                            )
 
-        # Actually create a User (member) record from the visitor's face data
+        # Create a User (member) record from the visitor's face data
         new_user = User(
             org_id=admin.org_id,
             name=v.label,
-            face_embedding=v.face_embedding if v.face_embedding else b'\x00' * 128 * 8,
+            face_embedding=v.face_embedding if v.face_embedding else b'\x00' * 512 * 4,
             profile_photo=v.face_photo,
             email=None,
             phone=None,
+            branch_id=effective_member_branch_id,
+            is_global=effective_member_branch_id is None,
         )
         db.add(new_user)
         db.flush()  # get the new user id
         v.linked_member_id = new_user.id
+
+        # Update all attendance records for this visitor to reflect member status
+        from app.models.attendance import Attendance
+        db.query(Attendance).filter(
+            Attendance.visitor_id == v.id,
+            Attendance.org_id == admin.org_id,
+        ).update({
+            Attendance.member_type: "member",
+            Attendance.name: v.label,
+            Attendance.user_id: new_user.id,
+        })
+
         db.commit()
-        return {"message": f"Visitor registered as new member: {v.label}", "visitor_id": v.id, "member_id": new_user.id}
+        return {"message": f"Visitor promoted to member: {v.label}", "visitor_id": v.id, "member_id": new_user.id}
 
     elif req.action == "link_existing":
         if not req.member_id:
@@ -114,6 +154,18 @@ def verify_visitor(
         v.label = user.name
         v.is_new_member = False
         v.verified = True
+
+        # Update all attendance records for this visitor to reflect member link
+        from app.models.attendance import Attendance
+        db.query(Attendance).filter(
+            Attendance.visitor_id == v.id,
+            Attendance.org_id == admin.org_id,
+        ).update({
+            Attendance.member_type: "member",
+            Attendance.name: user.name,
+            Attendance.user_id: user.id,
+        })
+
         db.commit()
         return {"message": f"Visitor linked to member: {user.name}", "visitor_id": v.id}
 
@@ -138,15 +190,16 @@ def delete_visitor(visitor_id: int, admin: Admin = Depends(get_current_admin), d
 @router.get("/visitors/stats")
 def visitor_stats(admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
     """Get visitor statistics."""
-    total = db.query(Visitor).filter(Visitor.org_id == admin.org_id).count()
-    verified = db.query(Visitor).filter(Visitor.org_id == admin.org_id, Visitor.verified == True).count()
+    base = db.query(Visitor).filter(Visitor.org_id == admin.org_id)
+    if admin.role != "owner" and admin.branch_id:
+        base = base.filter(Visitor.branch_id == admin.branch_id)
+    total = base.count()
+    verified = base.filter(Visitor.verified == True).count()
     unverified = total - verified
-    new_members = db.query(Visitor).filter(
-        Visitor.org_id == admin.org_id, Visitor.is_new_member == True, Visitor.verified == True
+    new_members = base.filter(
+        Visitor.is_new_member == True, Visitor.verified == True
     ).count()
-    returning = db.query(Visitor).filter(
-        Visitor.org_id == admin.org_id, Visitor.visit_count > 1
-    ).count()
+    returning = base.filter(Visitor.visit_count > 1).count()
     return {
         "total": total,
         "verified": verified,
